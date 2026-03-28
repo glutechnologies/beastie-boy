@@ -1,0 +1,16 @@
+{
+	"folders": [
+		{
+			"path": "."
+		}
+	],
+	"settings": {
+		"editor.fontSize": 12,
+		"cSpell.words": [
+			"monitorització",
+			"recursivament"
+		],
+		"cSpell.enabled": false,
+		"makefile.configureOnOpen": false
+	}
+}
