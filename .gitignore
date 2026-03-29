@@ -56,4 +56,5 @@ dkms.conf
 # debug information files
 *.dwo
 *.vscode
+*.code-workspace
 *.codex
