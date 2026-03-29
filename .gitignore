@@ -58,3 +58,4 @@ dkms.conf
 *.vscode
 *.code-workspace
 *.codex
+config.mk

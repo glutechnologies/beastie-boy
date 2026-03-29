@@ -1,5 +1,26 @@
 # Beastie-Boy
-Aquest projecte té objectiu desenvolupar dues eines _beastie_ i _boy_. La primera volcarà les dades en memòria compartida amb VPP per capturar els paquets o trames intercanviades per una interfície de xarxa en mode _span/mirror_. La segona permetrà configurar VPP per activar el mode _pan/mirror_ a través de la seva API.
+Aquest projecte té objectiu desenvolupar dues eines _beastie_ i _boy_. La primera volca les dades en memòria compartida amb [VPP](https://fd.io/) a través de `memif`, un tipus d'interfície de memòria directa de molt alt rendiment que es pot utilitzar entre instàncies de FD.io VPP. Posteriorment _beastie_ genera un arxiu de captura  dels paquets o trames intercanviades per una interfície de xarxa en mode _span/mirror_. La segona permet configurar VPP per activar el mode _span/mirror_ a través de la seva API.
+
+## Compilació i instal·lació
+El projecte incorpora un script tipus _configure_ personalitzat per validar dependències abans de compilar. Entre d'altres comprovacions, executes proves de _headers_ i enllaç per `pcap`, `memif` i `vapi`. Podem executar-ho primer:
+
+```bash
+$ ./configure
+```
+Es generarà el fitxer `config.mk`, que conté els flags detectats (pcap/memif/vapi) i s'inclou des del `Makefile`.
+
+Si executem `make`, començarà per llençar `configure` i seguirà compilant i linkant la resta del projecte:
+
+```bash
+$ make
+```
+Opcionalment podem eliminar les restes d'arxius objecte i binaris de compilacions anteriors i actoar els flags de _debug_ `-O0 -g` i els binaris es generaran amb símbols de depuració sense optimitzacions agressives:
+
+```bash
+$ make clean
+$ ./configure --quiet
+$ make debug
+```
 
 # Appendix A: Instal·lació de VPP
 Compilar la versió estable de VPP 26.02 i crearem un paquet per Debian. Partirem de la hiopòtesi qyue en el sistema no hi ha vi VPP ni DPDK instal·lats.

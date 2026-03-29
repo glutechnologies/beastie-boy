@@ -8,22 +8,19 @@
 #include <stdio.h>
 #include <string.h>
 
-#define PCAP_FILENAME "capture.pcap"
-#define DEF_MEMIF_SOCKET_PATH "/run/vpp/memif.sock"
 #define MEMIF_LOCAL_IFNAME "btie0"
-#define DEF_MEMIF_ID 0U
 #define MAX_MEMIF_BUFS 256
 #define PROGRESS_BAR_WIDTH 32
 #define PCAP_FLUSH_INTERVAL_BYTES (1024ULL * 1024ULL)
 
 static volatile sig_atomic_t keep_running = 1;
-static const char *pcap_filename = PCAP_FILENAME;
+static const char *pcap_filename = BEASTIE_DEFAULT_OUTPUT_FILENAME;
 static uint64_t packets_captured = 0;
 static uint64_t bytes_captured = 0;
 static uint64_t max_bytes_to_capture = 0;
 static uint64_t bytes_since_last_flush = 0;
-static uint32_t current_memif_id = DEF_MEMIF_ID;
-static const char *current_memif_socket_path = DEF_MEMIF_SOCKET_PATH;
+static uint32_t current_memif_id = BEASTIE_DEFAULT_MEMIF_ID;
+static const char *current_memif_socket_path = BEASTIE_DEFAULT_MEMIF_SOCKET_PATH;
 static app_log_level_t current_log_level = APP_LOG_INFO;
 
 static void beastie_log(app_log_level_t level, const char *format, ...)
@@ -196,7 +193,7 @@ int beastie_run(const char *output_filename, uint64_t max_capture_bytes, uint32_
 	current_memif_id = memif_id;
 	current_memif_socket_path =
 		(memif_socket_path != NULL && memif_socket_path[0] != '\0') ?
-		memif_socket_path : DEF_MEMIF_SOCKET_PATH;
+		memif_socket_path : BEASTIE_DEFAULT_MEMIF_SOCKET_PATH;
 	keep_running = 1;
 
 	signal(SIGINT, handle_signal);

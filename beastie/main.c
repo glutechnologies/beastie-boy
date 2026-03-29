@@ -7,10 +7,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#define DEFAULT_MAX_CAPTURE_BYTES (10ULL * 256ULL * 256ULL)
-#define DEFAULT_MEMIF_ID 0U
-#define DEFAULT_MEMIF_SOCKET_PATH "/run/vpp/memif.sock"
-
 static void print_usage(const char *progname)
 {
     char compact_bytes[32];
@@ -50,10 +46,10 @@ static void print_usage(const char *progname)
             "  %s --write trace.pcap --max-bytes 1048576\n"
             "  %s --id 3 --write trace.pcap\n"
             "  %s --socket /run/vpp/custom.sock --write trace.pcap\n",
-            progname, (uint64_t)DEFAULT_MAX_CAPTURE_BYTES,
-            app_format_bytes_compact(DEFAULT_MAX_CAPTURE_BYTES, compact_bytes, sizeof(compact_bytes)),
-            DEFAULT_MEMIF_ID,
-            DEFAULT_MEMIF_SOCKET_PATH,
+            progname, (uint64_t)BEASTIE_DEFAULT_MAX_CAPTURE_BYTES,
+            app_format_bytes_compact(BEASTIE_DEFAULT_MAX_CAPTURE_BYTES, compact_bytes, sizeof(compact_bytes)),
+            BEASTIE_DEFAULT_MEMIF_ID,
+            BEASTIE_DEFAULT_MEMIF_SOCKET_PATH,
             progname, progname, progname, progname, progname);
 }
 
@@ -86,10 +82,10 @@ static int parse_memif_id(const char *value, uint32_t *result)
 }
 
 int main(int argc, char *argv[]) {
-    const char *output_filename = "capture.pcap";
-    uint64_t max_capture_bytes = DEFAULT_MAX_CAPTURE_BYTES;
-    uint32_t memif_id = DEFAULT_MEMIF_ID;
-    const char *memif_socket_path = DEFAULT_MEMIF_SOCKET_PATH;
+    const char *output_filename = BEASTIE_DEFAULT_OUTPUT_FILENAME;
+    uint64_t max_capture_bytes = BEASTIE_DEFAULT_MAX_CAPTURE_BYTES;
+    uint32_t memif_id = BEASTIE_DEFAULT_MEMIF_ID;
+    const char *memif_socket_path = BEASTIE_DEFAULT_MEMIF_SOCKET_PATH;
     app_log_level_t log_level = APP_LOG_INFO;
     int opt;
     static const struct option long_options[] = {
