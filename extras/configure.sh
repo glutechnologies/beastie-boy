@@ -3,8 +3,6 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
-REQUIRED_LIBMEMIF_REF="${1:-v26.02}"
 
 require_command() {
   local cmd="$1"
@@ -24,6 +22,15 @@ require_header() {
   fi
 }
 
+require_file() {
+  local path="$1"
+
+  if [ ! -f "$path" ]; then
+    echo "Missing required file: $path" >&2
+    exit 1
+  fi
+}
+
 echo "Checking build tools..."
 require_command git
 require_command cmake
@@ -32,11 +39,15 @@ require_command gcc
 
 echo "Checking system headers..."
 require_header /usr/include/pcap/pcap.h
+require_header /usr/include/libmemif.h
+require_header /usr/include/vapi/vapi.h
+require_header /usr/include/vapi/vpe.api.vapi.h
 
-echo "Preparing vendored libmemif..."
-bash "$SCRIPT_DIR/get_libmemif.sh"
+echo "Checking system libraries..."
+require_file /lib/libmemif.so
+require_file /lib/x86_64-linux-gnu/libvapiclient.so
 
 echo "Validating libmemif compatibility..."
-bash "$SCRIPT_DIR/check_libmemif.sh" "$REQUIRED_LIBMEMIF_REF"
+bash "$SCRIPT_DIR/check_libmemif.sh"
 
 echo "Configuration completed successfully."

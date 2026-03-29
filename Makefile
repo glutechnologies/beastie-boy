@@ -1,41 +1,38 @@
 CC=gcc
-LIBMEMIF_DIR=lib/libmemif
-LIBMEMIF_INCLUDE_DIR=$(LIBMEMIF_DIR)/include
-LIBMEMIF_BUILD_DIR=$(LIBMEMIF_DIR)/build
-LIBMEMIF_LIB=$(LIBMEMIF_BUILD_DIR)/lib/libmemif.so
-LIBMEMIF_REQUIRED_REF=v26.02
 BIN_DIR=bin
 BEASTIE_BIN=$(BIN_DIR)/beastie
 BOY_BIN=$(BIN_DIR)/boy
-CFLAGS=-Wall -O2 -I$(LIBMEMIF_INCLUDE_DIR) -Ibeastie -Iboy
-LDFLAGS=-L$(LIBMEMIF_BUILD_DIR)/lib -lmemif -lpcap -lpthread
+CFLAGS=-Wall -O2 -I. -Icommon -Ibeastie -Iboy
+DEBUG_CFLAGS=-Wall -O0 -g -I. -Icommon -Ibeastie -Iboy
+BOY_CFLAGS=-Wall -O2 -I. -Icommon -Iboy
+BOY_DEBUG_CFLAGS=-Wall -O0 -g -I. -Icommon -Iboy
+LDFLAGS=-lmemif -lpcap -lpthread
+BOY_LDFLAGS=-lpcap -lpthread -lvapiclient
+COMMON_SRC=common/common.c
 
-all: configure $(BEASTIE_BIN) $(BOY_BIN)
+all: check $(BEASTIE_BIN) $(BOY_BIN)
 configure:
-	bash ./extras/configure.sh $(LIBMEMIF_REQUIRED_REF)
-debug:
-	bash ./extras/debug.sh $(LIBMEMIF_REQUIRED_REF)
+	bash ./extras/configure.sh
+debug: debug-beastie debug-boy
+check:
+	bash ./extras/debug.sh
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
 
-$(BEASTIE_BIN): beastie/main.c beastie/beastie.c beastie/pcap_writer.c $(LIBMEMIF_LIB) | $(BIN_DIR) check-libmemif
+$(BEASTIE_BIN): beastie/main.c beastie/beastie.c beastie/pcap_writer.c $(COMMON_SRC) | $(BIN_DIR)
 	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
 
-$(BOY_BIN): boy/main.c boy/boy.c $(LIBMEMIF_LIB) | $(BIN_DIR) check-libmemif
-	$(CC) $(CFLAGS) -o $@ $^ $(LDFLAGS)
+$(BOY_BIN): boy/main.c boy/boy.c $(COMMON_SRC) | $(BIN_DIR)
+	$(CC) $(BOY_CFLAGS) -o $@ $^ $(BOY_LDFLAGS)
 
-$(LIBMEMIF_DIR)/CMakeLists.txt:
-	./extras/get_libmemif.sh
+debug-beastie: beastie/main.c beastie/beastie.c beastie/pcap_writer.c $(COMMON_SRC) | $(BIN_DIR)
+	$(CC) $(DEBUG_CFLAGS) -o $(BEASTIE_BIN) $^ $(LDFLAGS)
 
-$(LIBMEMIF_LIB): $(LIBMEMIF_DIR)/CMakeLists.txt
-	./extras/get_libmemif.sh
-
-check-libmemif: $(LIBMEMIF_DIR)/CMakeLists.txt
-	bash ./extras/check_libmemif.sh $(LIBMEMIF_REQUIRED_REF)
+debug-boy: boy/main.c boy/boy.c $(COMMON_SRC) | $(BIN_DIR)
+	$(CC) $(BOY_DEBUG_CFLAGS) -o $(BOY_BIN) $^ $(BOY_LDFLAGS)
 
 clean:
 	rm -rf $(BIN_DIR)
-	@if [ -d "$(LIBMEMIF_BUILD_DIR)" ]; then rm -rf "$(LIBMEMIF_BUILD_DIR)"; fi
 
-.PHONY: all clean check-libmemif configure debug
+.PHONY: all clean check configure debug debug-beastie debug-boy

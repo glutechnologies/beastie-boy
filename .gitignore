@@ -35,6 +35,8 @@
 *.i*86
 *.x86_64
 *.hex
+*.pcap
+/bin
 
 # Debug files
 *.dSYM/
@@ -55,4 +57,3 @@ dkms.conf
 *.dwo
 *.vscode
 *.codex
-lib/libmemif/build/
