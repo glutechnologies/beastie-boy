@@ -2,25 +2,39 @@
 Aquest projecte té objectiu desenvolupar dues eines _beastie_ i _boy_. La primera volca les dades en memòria compartida amb [VPP](https://fd.io/) a través de `memif`, un tipus d'interfície de memòria directa de molt alt rendiment que es pot utilitzar entre instàncies de FD.io VPP. Posteriorment _beastie_ genera un arxiu de captura  dels paquets o trames intercanviades per una interfície de xarxa en mode _span/mirror_. La segona permet configurar VPP per activar el mode _span/mirror_ a través de la seva API.
 
 ## Compilació i instal·lació
-El projecte incorpora un script tipus _configure_ personalitzat per validar dependències abans de compilar. Entre d'altres comprovacions, executes proves de _headers_ i enllaç per `pcap`, `memif` i `vapi`. Podem executar-ho primer:
+El projecte incorpora un script `./configure` personalitzat per validar dependències abans de compilar i generar `config.mk`. Fa comprovacions de _headers_ i enllaç per `pcap`, `memif` i `vapi`, i també detecta la versió de VPP suportada.
+
+Iniciem el procés amb la configuració de l'entorn de compilació:
 
 ```bash
 $ ./configure
 ```
-Es generarà el fitxer `config.mk`, que conté els flags detectats (pcap/memif/vapi) i s'inclou des del `Makefile`.
+Es generarà el fitxer `config.mk`, inclòs després pel `Makefile`, amb _flags_ detectats (`PCAP_*`, `MEMIF_*`, `VAPI_*`), metadades de compatibilitat VPP (`VPP_API_VERSION`, `VPP_API_SERIES`) i macros de compilació (`VPP_COMPAT_CPPFLAGS`). Diposa d'algunes opcions útils:
 
-Si executem `make`, començarà per llençar `configure` i seguirà compilant i linkant la resta del projecte:
+- `--quiet`: redueix la sortida
+- `--supported-vpp-series=2506,2510,2602`: defineix la llista de sèries admeses
+- `--allow-unsupported-vpp`: permet continuar si la sèrie detectada no és a la llista
+
+La detecció de versió VPP es fa primer amb `pkg-config`; si no està disponible, fa _fallback_ amb `dpkg-query` (habitual en instal·lacions VPP via `.deb`).
+
+Si tot a anar bé, podem iniciar la compilació:
 
 ```bash
 $ make
 ```
-Opcionalment podem eliminar les restes d'arxius objecte i binaris de compilacions anteriors i actoar els flags de _debug_ `-O0 -g` i els binaris es generaran amb símbols de depuració sense optimitzacions agressives:
+`make` de fet invoca `./configure` i compila els dos binaris `bin/beastie` i `bin/boy`. El `Makefile` actual és incremental i compila per objectes (`.o`), genera dependències automàtiques (`.d`) amb `-MMD -MP` i detecta canvis en `.c` i `.h` sense necessitat de `make clean`.
+
+Si estem duent a terme tasques de depurat, podem compilar amb `-O0 -g`, és a dir, sense optimitzacions agressives:
 
 ```bash
-$ make clean
-$ ./configure --quiet
 $ make debug
 ```
+Per reconfigurar o netejar:
+```bash
+$ make reconfigure
+$ make clean
+```
+`make clean` elimina binaris, arxius objecte i `config.mk`.
 
 # Appendix A: Instal·lació de VPP
 Compilar la versió estable de VPP 26.02 i crearem un paquet per Debian. Partirem de la hiopòtesi qyue en el sistema no hi ha vi VPP ni DPDK instal·lats.
@@ -61,7 +75,7 @@ Si no s'han instal·lat dependències per `dpkg`, podem forçar la seva instal·
 $ apt -f install
 ```
 
-# Appendix B: Plataforma de desenvolupament APU3 + Debian 13
+# Appendix B: Plataforma de desenvolupament APU3 amb Debian 13
 Disposem d'una PC Engines APU3D4 amb 3 LAN i211AT / CPU AMD GX-412TC / 4 GB de DRAM. Aquestes targetes de xarxa són compatibles amb DPDK. Per instal·lar Debian 13 cal descarregar una imatge `netinst.iso` de https://www.debian.org/CD/netinst/ i copiar-la a una unitat USB:
 
 ```

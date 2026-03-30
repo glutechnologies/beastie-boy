@@ -1,8 +1,10 @@
 #include "beastie.h"
 #include "pcap_writer.h"
+#include "common/table.h"
 
 #include <libmemif.h>
 #include <signal.h>
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -43,6 +45,32 @@ void beastie_set_log_level(app_log_level_t level)
 	current_log_level = level;
 }
 
+static void beastie_reset_capture_state(const char *output_filename, uint64_t max_capture_bytes,
+					uint32_t memif_id, const char *memif_socket_path)
+{
+	if (output_filename != NULL && output_filename[0] != '\0') {
+		pcap_filename = output_filename;
+	}
+	packets_captured = 0;
+	bytes_captured = 0;
+	max_bytes_to_capture = max_capture_bytes;
+	bytes_since_last_flush = 0;
+	current_memif_id = memif_id;
+	current_memif_socket_path =
+		(memif_socket_path != NULL && memif_socket_path[0] != '\0') ?
+		memif_socket_path : BEASTIE_DEFAULT_MEMIF_SOCKET_PATH;
+	keep_running = 1;
+}
+
+static int beastie_table_add_metric(app_table_t *table, const char *metric, const char *value)
+{
+	const char *row[2];
+
+	row[0] = metric;
+	row[1] = value;
+	return app_table_add_row(table, row);
+}
+
 static void print_capture_progress(void)
 {
 	char bar[PROGRESS_BAR_WIDTH + 1];
@@ -77,8 +105,46 @@ static void print_capture_progress(void)
 
 static void print_capture_summary(void)
 {
+	app_table_t table;
+	const app_table_column_t columns[] = {
+		{"Metric", 8, 18, 0, APP_TABLE_ALIGN_LEFT},
+		{"Value", 5, 0, 1, APP_TABLE_ALIGN_LEFT},
+	};
+	char bytes_buffer[32];
+	char max_bytes_buffer[32];
+	char packets_buffer[32];
+	bool table_ok;
+
 	print_capture_progress();
 	printf("\n");
+
+	table_ok = (app_table_init(&table, columns, sizeof(columns) / sizeof(columns[0])) == 0);
+	if (table_ok) {
+		snprintf(packets_buffer, sizeof(packets_buffer), "%" PRIu64, packets_captured);
+		table_ok = (beastie_table_add_metric(&table, "Packets", packets_buffer) == 0);
+		if (table_ok) {
+			table_ok = (beastie_table_add_metric(
+					    &table, "Bytes",
+					    app_format_bytes_compact(bytes_captured, bytes_buffer,
+								   sizeof(bytes_buffer))) == 0);
+		}
+		if (table_ok) {
+			table_ok = (beastie_table_add_metric(&table, "Output", pcap_filename) == 0);
+		}
+		if (table_ok && max_bytes_to_capture > 0) {
+			table_ok = (beastie_table_add_metric(
+					    &table, "Max Bytes",
+					    app_format_bytes_compact(max_bytes_to_capture,
+								   max_bytes_buffer,
+								   sizeof(max_bytes_buffer))) == 0);
+		}
+
+		if (table_ok) {
+			app_table_render(stdout, &table);
+		}
+		app_table_free(&table);
+	}
+
 	beastie_log(APP_LOG_DEBUG,
 		    "capture summary: packets=%" PRIu64 " bytes=%" PRIu64 " output=%s",
 		    packets_captured, bytes_captured, pcap_filename);
@@ -183,18 +249,7 @@ int beastie_run(const char *output_filename, uint64_t max_capture_bytes, uint32_
 	int err;
 	int rc = 1;
 
-	if (output_filename != NULL && output_filename[0] != '\0') {
-		pcap_filename = output_filename;
-	}
-	packets_captured = 0;
-	bytes_captured = 0;
-	max_bytes_to_capture = max_capture_bytes;
-	bytes_since_last_flush = 0;
-	current_memif_id = memif_id;
-	current_memif_socket_path =
-		(memif_socket_path != NULL && memif_socket_path[0] != '\0') ?
-		memif_socket_path : BEASTIE_DEFAULT_MEMIF_SOCKET_PATH;
-	keep_running = 1;
+	beastie_reset_capture_state(output_filename, max_capture_bytes, memif_id, memif_socket_path);
 
 	signal(SIGINT, handle_signal);
 	signal(SIGTERM, handle_signal);

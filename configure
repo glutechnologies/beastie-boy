@@ -11,6 +11,8 @@ CC_BIN="${CC:-gcc}"
 CPPFLAGS_IN="${CPPFLAGS:-}"
 CFLAGS_IN="${CFLAGS:-}"
 LDFLAGS_IN="${LDFLAGS:-}"
+ALLOW_UNSUPPORTED_VPP=0
+SUPPORTED_VPP_SERIES="2506 2510 2602"
 
 usage() {
   cat <<'EOF'
@@ -18,6 +20,11 @@ Usage: ./configure [options]
 
 Options:
   --prefix=PATH        Installation prefix (stored in config.mk)
+  --supported-vpp-series=LIST
+                       Space or comma separated supported VPP API series
+                       (example: 2410,2502,2506)
+  --allow-unsupported-vpp
+                       Continue even if detected VPP series is not supported
   --quiet              Reduce output
   -h, --help           Show this help message
 EOF
@@ -26,6 +33,20 @@ EOF
 log() {
   if [ "$QUIET" -eq 0 ]; then
     printf '%s\n' "$*"
+  fi
+}
+
+log_check_start() {
+  name="$1"
+  if [ "$QUIET" -eq 0 ]; then
+    printf '%-64s : ' "Checking $name"
+  fi
+}
+
+log_check_result() {
+  result="$1"
+  if [ "$QUIET" -eq 0 ]; then
+    printf '%s\n' "$result"
   fi
 }
 
@@ -72,6 +93,12 @@ while [ "$#" -gt 0 ]; do
     --quiet)
       QUIET=1
       ;;
+    --supported-vpp-series=*)
+      SUPPORTED_VPP_SERIES="${1#*=}"
+      ;;
+    --allow-unsupported-vpp)
+      ALLOW_UNSUPPORTED_VPP=1
+      ;;
     -h|--help)
       usage
       exit 0
@@ -82,6 +109,8 @@ while [ "$#" -gt 0 ]; do
   esac
   shift
 done
+
+SUPPORTED_VPP_SERIES="$(printf '%s\n' "$SUPPORTED_VPP_SERIES" | tr ',' ' ' | xargs)"
 
 require_cmd make
 require_cmd "$CC_BIN"
@@ -108,13 +137,40 @@ done
 
 VAPI_CFLAGS=""
 VAPI_LIBS="-lvapiclient"
+VAPI_PKG=""
 for pkg in vapiclient vpp-api-client; do
   if cflags="$(pkg_config_flags "$pkg" cflags)"; then
     VAPI_CFLAGS="$cflags"
     VAPI_LIBS="$(pkg_config_flags "$pkg" libs)"
+    VAPI_PKG="$pkg"
     break
   fi
 done
+
+VPP_API_VERSION="unknown"
+VPP_SERIES="0"
+if [ -n "$VAPI_PKG" ] && command -v pkg-config >/dev/null 2>&1; then
+  VPP_API_VERSION="$(pkg-config --modversion "$VAPI_PKG" 2>/dev/null || true)"
+fi
+
+if [ "$VPP_API_VERSION" = "unknown" ] && command -v dpkg-query >/dev/null 2>&1; then
+  for pkg in vpp-dev vpp libvppinfra-dev libvppinfra; do
+    if dpkg-query -W -f='${Status}' "$pkg" 2>/dev/null | grep -q "install ok installed"; then
+      VPP_API_VERSION="$(dpkg-query -W -f='${Version}' "$pkg" 2>/dev/null || true)"
+      [ -n "$VPP_API_VERSION" ] || VPP_API_VERSION="unknown"
+      break
+    fi
+  done
+fi
+
+if [ "$VPP_API_VERSION" != "unknown" ]; then
+  if printf '%s\n' "$VPP_API_VERSION" | grep -Eq '^[0-9]+\.[0-9]+'; then
+    VPP_MAJOR="$(printf '%s\n' "$VPP_API_VERSION" | sed -E 's/^([0-9]+)\..*/\1/')"
+    VPP_MINOR="$(printf '%s\n' "$VPP_API_VERSION" | sed -E 's/^[0-9]+\.([0-9]+).*/\1/')"
+    VPP_MINOR_PADDED="$(printf '%02d' "$VPP_MINOR")"
+    VPP_SERIES="${VPP_MAJOR}${VPP_MINOR_PADDED}"
+  fi
+fi
 
 TMP_DIR="$(mktemp -d)"
 cleanup() {
@@ -128,15 +184,16 @@ check_compile() {
   cflags_extra="$3"
   libs_extra="$4"
 
-  log "checking $name"
+  log_check_start "$name"
   printf '%s\n' "$code" >"$TMP_DIR/conftest.c"
   if "$CC_BIN" $CPPFLAGS_IN $CFLAGS_IN $cflags_extra \
       -o "$TMP_DIR/conftest" "$TMP_DIR/conftest.c" \
       $LDFLAGS_IN $libs_extra >"$TMP_DIR/conftest.out" 2>&1; then
-    log "  -> ok"
+    log_check_result "OK"
     return 0
   fi
 
+  log_check_result "FAIL"
   sed 's/^/  /' "$TMP_DIR/conftest.out" >&2 || true
   fail "$name failed"
 }
@@ -146,15 +203,16 @@ check_headers_only() {
   code="$2"
   cflags_extra="$3"
 
-  log "checking $name"
+  log_check_start "$name"
   printf '%s\n' "$code" >"$TMP_DIR/conftest.c"
   if "$CC_BIN" $CPPFLAGS_IN $CFLAGS_IN $cflags_extra \
       -c -o "$TMP_DIR/conftest.o" "$TMP_DIR/conftest.c" \
       >"$TMP_DIR/conftest.out" 2>&1; then
-    log "  -> ok"
+    log_check_result "OK"
     return 0
   fi
 
+  log_check_result "FAIL"
   sed 's/^/  /' "$TMP_DIR/conftest.out" >&2 || true
   fail "$name failed"
 }
@@ -198,8 +256,34 @@ check_headers_only \
 int main(void) { return 0; }' \
   "$VAPI_CFLAGS"
 
-log "checking libmemif API compatibility"
+log_check_start "libmemif API compatibility"
 check_libmemif_api
+log_check_result "OK"
+
+log_check_start "supported VPP API series"
+if [ "$VPP_SERIES" = "0" ]; then
+  log_check_result "warning"
+  log "  could not determine VPP API series from pkg-config version '$VPP_API_VERSION'"
+  log "  continuing with BOY_VPP_API_SERIES=0"
+else
+  VPP_SERIES_SUPPORTED=0
+  for series in $SUPPORTED_VPP_SERIES; do
+    if [ "$series" = "$VPP_SERIES" ]; then
+      VPP_SERIES_SUPPORTED=1
+      break
+    fi
+  done
+  if [ "$VPP_SERIES_SUPPORTED" -eq 1 ]; then
+    log_check_result "OK"
+    log "  detected VPP series: $VPP_SERIES (version: $VPP_API_VERSION)"
+  elif [ "$ALLOW_UNSUPPORTED_VPP" -eq 1 ]; then
+    log_check_result "warning"
+    log "  detected unsupported VPP series $VPP_SERIES (version: $VPP_API_VERSION)"
+  else
+    log_check_result "failed"
+    fail "detected unsupported VPP series $VPP_SERIES (version: $VPP_API_VERSION), supported: $SUPPORTED_VPP_SERIES"
+  fi
+fi
 
 cat >"$CONFIG_MK" <<EOF
 # Generated by ./configure. Do not edit by hand.
@@ -213,6 +297,9 @@ MEMIF_CFLAGS := $MEMIF_CFLAGS
 MEMIF_LIBS := $MEMIF_LIBS
 VAPI_CFLAGS := $VAPI_CFLAGS
 VAPI_LIBS := $VAPI_LIBS
+VPP_API_VERSION := $VPP_API_VERSION
+VPP_API_SERIES := $VPP_SERIES
+VPP_COMPAT_CPPFLAGS := -DBOY_VPP_API_SERIES=$VPP_SERIES -DBOY_VPP_API_VERSION_STR=\"$VPP_API_VERSION\"
 EOF
 
 log "configuration completed successfully"
