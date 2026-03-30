@@ -1,7 +1,7 @@
 # Beastie-Boy
 Aquest projecte té objectiu desenvolupar dues eines _beastie_ i _boy_. La primera volca les dades en memòria compartida amb [VPP](https://fd.io/) a través de `memif`, un tipus d'interfície de memòria directa de molt alt rendiment que es pot utilitzar entre instàncies de FD.io VPP. Posteriorment _beastie_ genera un arxiu de captura  dels paquets o trames intercanviades per una interfície de xarxa en mode _span/mirror_. La segona permet configurar VPP per activar el mode _span/mirror_ a través de la seva API.
 
-## Compilació i instal·lació
+## Compilació
 El projecte incorpora un script `./configure` personalitzat per validar dependències abans de compilar i generar `config.mk`. Fa comprovacions de _headers_ i enllaç per `pcap`, `memif` i `vapi`, i també detecta la versió de VPP suportada.
 
 Iniciem el procés amb la configuració de l'entorn de compilació:
@@ -17,7 +17,7 @@ Es generarà el fitxer `config.mk`, inclòs després pel `Makefile`, amb _flags_
 
 La detecció de versió VPP es fa primer amb `pkg-config`; si no està disponible, fa _fallback_ amb `dpkg-query` (habitual en instal·lacions VPP via `.deb`).
 
-Si tot a anar bé, podem iniciar la compilació:
+Si tot ha anat bé, podem iniciar la compilació:
 
 ```bash
 $ make
@@ -29,12 +29,11 @@ Si estem duent a terme tasques de depurat, podem compilar amb `-O0 -g`, és a di
 ```bash
 $ make debug
 ```
-Per reconfigurar o netejar:
+Per reconfigurar, eliminar binaris, arxius objecte i `config.mk`:
 ```bash
 $ make reconfigure
 $ make clean
 ```
-`make clean` elimina binaris, arxius objecte i `config.mk`.
 
 # Appendix A: Instal·lació de VPP
 Compilar la versió estable de VPP 26.02 i crearem un paquet per Debian. Partirem de la hiopòtesi qyue en el sistema no hi ha vi VPP ni DPDK instal·lats.
@@ -215,6 +214,10 @@ Proposem els següents arxiu `etc/sysctl.d/80-vpp.conf`:
 ```
 # VPP on small-memory systems (APU3, 4 GB RAM)
 # Conservative values to avoid starving the OS.
+
+# Reserve hugepages for DPDK/VPP (2 MB pages)
+# 512 * 2 MB = 1 GB reserved for hugepages
+vm.nr_hugepages = 512
 
 # Allow large shared-memory and hugepage-backed mappings
 vm.max_map_count = 262144

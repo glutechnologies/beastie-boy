@@ -10,6 +10,15 @@ typedef enum boy_mode {
 	BOY_MODE_SHOW_SPAN = 1,
 	BOY_MODE_SHOW_MEMIF = 2,
 	BOY_MODE_UNSET_SPAN = 3,
+	BOY_MODE_SET_SPAN = 4,
 } boy_mode_t;
 
-int boy_run(boy_mode_t mode, app_log_level_t log_level, uint32_t span_unset_if_index);
+typedef enum boy_span_device_mode {
+	BOY_SPAN_DEVICE_RX = 0,
+	BOY_SPAN_DEVICE_TX = 1,
+	BOY_SPAN_DEVICE_BOTH = 2,
+} boy_span_device_mode_t;
+
+int boy_run(boy_mode_t mode, app_log_level_t log_level, uint32_t span_unset_if_index,
+	    uint32_t span_set_if_index, const char *span_set_memif_name,
+	    boy_span_device_mode_t span_set_device_mode);

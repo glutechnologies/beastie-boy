@@ -14,8 +14,11 @@ endif
 CC?=gcc
 BIN_DIR=bin
 OBJ_ROOT=$(BIN_DIR)/obj/release
+DEBUG_OBJ_ROOT=$(BIN_DIR)/obj/debug
 BEASTIE_BIN=$(BIN_DIR)/beastie
 BOY_BIN=$(BIN_DIR)/boy
+BEASTIE_DEBUG_BIN=$(BIN_DIR)/beastie.debug
+BOY_DEBUG_BIN=$(BIN_DIR)/boy.debug
 WARN_CFLAGS?=-Wall
 OPT_CFLAGS?=-O2
 DEBUG_OPT_CFLAGS?=-O0 -g
@@ -39,17 +42,23 @@ BOY_DEBUG_CFLAGS=$(WARN_CFLAGS) $(DEBUG_OPT_CFLAGS) $(BOY_INCLUDES) $(EXTRA_CPPF
 LDFLAGS=$(EXTRA_LDFLAGS) $(MEMIF_LIBS) $(PCAP_LIBS) -lpthread
 BOY_LDFLAGS=$(EXTRA_LDFLAGS) $(PCAP_LIBS) -lpthread $(VAPI_LIBS)
 COMMON_SRCS=common/common.c common/table.c
+BEASTIE_SRCS=$(shell find beastie -type f -name '*.c' | sort)
+BOY_SRCS=$(shell find boy -type f -name '*.c' | sort)
 
-BEASTIE_OBJS=$(OBJ_ROOT)/beastie/main.o \
-	     $(OBJ_ROOT)/beastie/beastie.o \
-	     $(OBJ_ROOT)/beastie/pcap_writer.o \
+BEASTIE_OBJS=$(patsubst beastie/%.c,$(OBJ_ROOT)/beastie/%.o,$(BEASTIE_SRCS)) \
 	     $(OBJ_ROOT)/common/common.o \
 	     $(OBJ_ROOT)/common/table.o
-BOY_OBJS=$(OBJ_ROOT)/boy/main.o \
-	 $(OBJ_ROOT)/boy/boy.o \
+BOY_OBJS=$(patsubst boy/%.c,$(OBJ_ROOT)/boy/%.o,$(BOY_SRCS)) \
 	 $(OBJ_ROOT)/common/common.o \
 	 $(OBJ_ROOT)/common/table.o
-DEPS=$(BEASTIE_OBJS:.o=.d) $(BOY_OBJS:.o=.d)
+BEASTIE_DEBUG_OBJS=$(patsubst beastie/%.c,$(DEBUG_OBJ_ROOT)/beastie/%.o,$(BEASTIE_SRCS)) \
+		   $(DEBUG_OBJ_ROOT)/common/common.o \
+		   $(DEBUG_OBJ_ROOT)/common/table.o
+BOY_DEBUG_OBJS=$(patsubst boy/%.c,$(DEBUG_OBJ_ROOT)/boy/%.o,$(BOY_SRCS)) \
+	       $(DEBUG_OBJ_ROOT)/common/common.o \
+	       $(DEBUG_OBJ_ROOT)/common/table.o
+DEPS=$(BEASTIE_OBJS:.o=.d) $(BOY_OBJS:.o=.d) \
+     $(BEASTIE_DEBUG_OBJS:.o=.d) $(BOY_DEBUG_OBJS:.o=.d)
 
 all: $(CONFIG_MK) $(BEASTIE_BIN) $(BOY_BIN)
 
@@ -76,17 +85,33 @@ $(OBJ_ROOT)/common/%.o: common/%.c $(CONFIG_MK) | $(BIN_DIR)
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
 
+$(DEBUG_OBJ_ROOT)/beastie/%.o: beastie/%.c $(CONFIG_MK) | $(BIN_DIR)
+	mkdir -p $(dir $@)
+	$(CC) $(DEBUG_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+
+$(DEBUG_OBJ_ROOT)/boy/%.o: boy/%.c $(CONFIG_MK) | $(BIN_DIR)
+	mkdir -p $(dir $@)
+	$(CC) $(BOY_DEBUG_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+
+$(DEBUG_OBJ_ROOT)/common/%.o: common/%.c $(CONFIG_MK) | $(BIN_DIR)
+	mkdir -p $(dir $@)
+	$(CC) $(DEBUG_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+
 $(BEASTIE_BIN): $(CONFIG_MK) $(BEASTIE_OBJS) | $(BIN_DIR)
 	$(CC) -o $@ $(BEASTIE_OBJS) $(LDFLAGS)
 
 $(BOY_BIN): $(CONFIG_MK) $(BOY_OBJS) | $(BIN_DIR)
 	$(CC) -o $@ $(BOY_OBJS) $(BOY_LDFLAGS)
 
-debug-beastie: $(CONFIG_MK) beastie/main.c beastie/beastie.c beastie/pcap_writer.c $(COMMON_SRCS) | $(BIN_DIR)
-	$(CC) $(DEBUG_CFLAGS) -o $(BEASTIE_BIN) beastie/main.c beastie/beastie.c beastie/pcap_writer.c $(COMMON_SRCS) $(LDFLAGS)
+$(BEASTIE_DEBUG_BIN): $(CONFIG_MK) $(BEASTIE_DEBUG_OBJS) | $(BIN_DIR)
+	$(CC) -o $@ $(BEASTIE_DEBUG_OBJS) $(LDFLAGS)
 
-debug-boy: $(CONFIG_MK) boy/main.c boy/boy.c $(COMMON_SRCS) | $(BIN_DIR)
-	$(CC) $(BOY_DEBUG_CFLAGS) -o $(BOY_BIN) boy/main.c boy/boy.c $(COMMON_SRCS) $(BOY_LDFLAGS)
+$(BOY_DEBUG_BIN): $(CONFIG_MK) $(BOY_DEBUG_OBJS) | $(BIN_DIR)
+	$(CC) -o $@ $(BOY_DEBUG_OBJS) $(BOY_LDFLAGS)
+
+debug-beastie: $(BEASTIE_DEBUG_BIN)
+
+debug-boy: $(BOY_DEBUG_BIN)
 
 clean:
 	rm -rf $(BIN_DIR) $(CONFIG_MK)
