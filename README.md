@@ -41,7 +41,7 @@ Compilar la versió estable de VPP 26.02 i crearem un paquet per Debian. Partire
 Instal·lem primers els paquets mínims per compilar-lo. Totes les comandes s'executem de manera implícita sotya _root_:
 ```bash
 $ apt update
-$ apt install -y git make sudo
+$ apt install -y git make sudo cmake build-essential
 ```
 Clonem el codi font des del dipòsit oficial:
 ```bash
@@ -51,15 +51,16 @@ $ git checkout v26.02
 ```
 Compilem la llibreria dinàmica `libmemif.so`:
 ```bash
-$ cd ~/vpp/extras/libmemif
-$ mkdir -p build
+$ cd /root/vpp/extras/libmemif
+$ mkdir build
 $ cd build
 $ cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
-$ make
+$ make -j"$(nproc)"
 $ make install
 ```
-Afegim les dependències per la compilació, provem el _build_ i empaquetem:
+Afegim les dependències per la compilació, provem el _build_ i empaquetem VPP:
 ```bash
+$ cd /root/vpp
 $ make install-dep
 $ make build-release
 $ make pkg-deb
