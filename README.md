@@ -274,26 +274,50 @@ $ sysctl --system
 ## Configuració de ASUSTeK P10S-I
 Disposem d'un altre maquinari. Es tracta d'un servidor amb una placa base ASUSTeK, P10S-I Series, BIOS American Megatrends Inc. versió 4602, 32GB de RAM i un processador Intel(R) Xeon(R) CPU E3-1220 v5 @ 3.00GHz. Per tal d'optimitzar aquest maquinari per treballar amb VPP, modifiquem els seguents paràmetres de BIOS (Advanced): 
 
-+---------------------------------+-------------------------------------------+----------------+
-| CATEGORIA                       | OPCIÓ DE LA BIOS                          | CONFIGURACIÓ   |
-+---------------------------------+-------------------------------------------+----------------+
-|  Virtualització i Bus PCIe      | Intel Virtualization Technology (VT-x)    | [Enabled]      |
-|                                 | PCI Latency Timer                         | [32 PCI clock] |
-+---------------------------------+-------------------------------------------+----------------+
-|  Gestió d'Energia i Freqüència  | C-States (CPU Power Management)           | [Disabled]     |
-|                                 | Intel SpeedStep                           | [Disabled]     |
-|                                 | Intel Speed Shift Technology              | [Disabled]     |
-|                                 | Turbo Mode (Turbo Boost)                  | [Disabled]     |
-|                                 | DMI Link ASPM Control                     | [Disabled]     |
-+---------------------------------+-------------------------------------------+----------------+
-| Rendiment del Processador       | Hardware Prefetcher                       | [Enabled]      |
-|                                 | Adjacent Cache Line Prefetch              | [Enabled]      |
-|                                 | CPU AES (AES-NI)                          | [Enabled]      |
-+---------------------------------+-------------------------------------------+----------------+
-| Funcions de Seguretat           | SW Guard Extensions (Intel SGX)           | [Disabled]     |
-|                                 | Intel TXT Support                         | [Disabled]     |
-+---------------------------------+-------------------------------------------+----------------+
+| CATEGORIA | OPCIÓ DE LA BIOS | CONFIGURACIÓ | 
+| ----- | ----- | ----- | 
+| Virtualització i Bus PCIe | Intel Virtualization Technology (VT-x) | [Enabled] | 
+| Virtualització i Bus PCIe | PCI Latency Timer | [32 PCI clock] | 
+| Gestió d'Energia i Freqüència | C-States (CPU Power Management) | [Disabled] | 
+| Gestió d'Energia i Freqüència | Intel SpeedStep | [Disabled] | 
+| Gestió d'Energia i Freqüència | Intel Speed Shift Technology | [Disabled] | 
+| Gestió d'Energia i Freqüència | Turbo Mode (Turbo Boost) | [Disabled] | 
+| Gestió d'Energia i Freqüència | DMI Link ASPM Control | [Disabled] | 
+| Rendiment del Processador | Hardware Prefetcher | [Enabled] | 
+| Rendiment del Processador | Adjacent Cache Line Prefetch | [Enabled] | 
+| Rendiment del Processador | CPU AES (AES-NI) | [Enabled] | 
+| Funcions de Seguretat | SW Guard Extensions (Intel SGX) | [Disabled] | 
+| Funcions de Seguretat | Intel TXT Support | [Disabled] |
 
+Afegim una entrada a `/etc/default/grub`:
+```
+GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt isolcpus=1-3 nohz_full=1-3 rcu_nocbs=1-3 processor.max_cstate=1 intel_idle.max_cstate=1"
+```
+El que fa és:
+* `intel_iommu=on iommu=pt`: Activa l'IOMMU (VT-d) i el posa en mode "pass-through" (pt). Això dóna accés directe i exclusiu de la targeta de xarxa al mòdul `vfio_pci`
+* `isolcpus=1-3`: Diu a l'OS que no enviï cap tasca normal als nuclis 1, 2 i 3. A `/etc/vpp/startup.conf` li direm a VPP que usi els cores 2 i 3 per processar paquets i l'1 per la resta de tasques 
+* `nohz_full=1-3 i rcu_nocbs=1-3`: Elimina les interrupcions de rellotge i de manteniment del sistema operatiu sobre aquests nuclis
+* `processor.max_cstate=1 intel_idle.max_cstate=1`: És una capa extra de seguretat per forçar que Linux no intenti adormir els nuclis (complementant el que ja vam fer a la BIOS)
+
+Apliquem els cavis:
+```bash
+$ update-grub
+```
+Modificarem el servei de vpp per tal que carregui el mòdul `vfio_pci`enlloc del `uio_pci_generic`. Debian 13 incorpora un nou mètode per modificar els serveis, de manera que les actualitzacions no els sobreescriguin. Executem:
+```bash
+$ systemctl edit vpp.service
+```
+S'obrirà un editor amb el contingut actual de l'arxiu comentat. Cal que el modifiquem en una zona concreta de l'arxiu. Hi afegim aquestes línies per eliminar l'anterior entrada `ExecStartPre` i modificar-ne el seu valor:
+```
+[Service]
+ExecStartPre=
+ExecStartPre=-/sbin/modprobe vfio_pci
+```
+Apliquem canvis i reiniciem VPP:
+```bash
+$ systemctl daemon-reload
+$ systemctl restart vpp
+```
 ## Dimensionat de _hugepages_
 Proposem els següents arxiu `etc/sysctl.d/80-vpp.conf`:
 ```
