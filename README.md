@@ -272,7 +272,9 @@ Si volem aplicar tots els arxius _system_ del sistema i verificar possibles conf
 $ sysctl --system
 ```
 ## Configuració de ASUSTeK P10S-I
-Disposem d'un altre maquinari. Es tracta d'un servidor amb una placa base ASUSTeK, P10S-I Series, BIOS American Megatrends Inc. versió 4602, 32GB de RAM i un processador Intel(R) Xeon(R) CPU E3-1220 v5 @ 3.00GHz. Per tal d'optimitzar aquest maquinari per treballar amb VPP, modifiquem els seguents paràmetres de BIOS (Advanced): 
+Disposem d'un altre maquinari. Es tracta d'un servidor amb una placa base ASUSTeK, P10S-I Series, BIOS American Megatrends Inc. versió 4602, 32GB de RAM i un processador Intel(R) Xeon(R) CPU E3-1220 v5 @ 3.00GHz. Aquest servidor està equipat amb dues targetes de xarxa integrades Intel I210 i una targeta PCIe Intel X710, de quatre ports SFP+.
+
+Per tal d'optimitzar aquest maquinari per treballar amb VPP, modifiquem els seguents paràmetres de BIOS (Advanced): 
 
 | CATEGORIA | OPCIÓ DE LA BIOS | CONFIGURACIÓ | 
 | ----- | ----- | ----- | 
@@ -313,11 +315,38 @@ S'obrirà un editor amb el contingut actual de l'arxiu comentat. Cal que el modi
 ExecStartPre=
 ExecStartPre=-/sbin/modprobe vfio_pci
 ```
-Apliquem canvis i reiniciem VPP:
+Atés que la configuració que farem sevir inclou un arxiu de log a `/var/log/vpp/vpp.log`, el creem per què per defecte la instal·lació de VPP no el crea. Apliquem canvis i reiniciem VPP:
 ```bash
 $ systemctl daemon-reload
 $ systemctl restart vpp
 ```
+Si observem el log del servei, després de la fase de càrrega de plugins hauríem de veure alguna cosa similar a aquesta:
+```
+Apr 01 17:15:21 bboy vpp[986]: vpp[986]: dpdk: EAL: Detected CPU lcores: 4
+Apr 01 17:15:21 bboy vpp[986]: dpdk: EAL: Detected CPU lcores: 4
+Apr 01 17:15:21 bboy vpp[986]: vpp[986]: dpdk: EAL: Detected NUMA nodes: 1
+Apr 01 17:15:21 bboy vpp[986]: vpp[986]: dpdk: EAL: Detected static linkage of DPDK
+Apr 01 17:15:21 bboy vpp[986]: vpp[986]: dpdk: EAL: Selected IOVA mode 'VA'
+Apr 01 17:15:21 bboy vpp[986]: vpp[986]: dpdk: EAL: No free 1048576 kB hugepages reported on node 0
+Apr 01 17:15:21 bboy vpp[986]: vpp[986]: dpdk: EAL: VFIO support initialized
+Apr 01 17:15:21 bboy vpp[986]: vpp[986]: dpdk: EAL: Using IOMMU type 1 (Type 1)
+Apr 01 17:15:21 bboy vpp[986]: dpdk: EAL: Detected NUMA nodes: 1
+Apr 01 17:15:21 bboy vpp[986]: dpdk: EAL: Detected static linkage of DPDK
+Apr 01 17:15:21 bboy vpp[986]: dpdk: EAL: Selected IOVA mode 'VA'
+Apr 01 17:15:21 bboy vpp[986]: dpdk: EAL: No free 1048576 kB hugepages reported on node 0
+Apr 01 17:15:21 bboy vpp[986]: dpdk: EAL: VFIO support initialized
+Apr 01 17:15:21 bboy vpp[986]: dpdk: EAL: Using IOMMU type 1 (Type 1)
+Apr 01 17:15:28 bboy vpp[986]: vpp[986]: dpdk: I40E_DRIVER: i40e_set_rx_function(): Using Vector AVX2 Scattered (port 0).
+Apr 01 17:15:28 bboy vpp[986]: vpp[986]: dpdk: I40E_DRIVER: i40e_set_rx_function(): Using Vector AVX2 Scattered (port 2).
+Apr 01 17:15:28 bboy vpp[986]: dpdk: I40E_DRIVER: i40e_set_rx_function(): Using Vector AVX2 Scattered (port 0).
+Apr 01 17:15:28 bboy vpp[986]: vpp[986]: dpdk: I40E_DRIVER: i40e_set_rx_function(): Using Vector AVX2 Scattered (port 3).
+Apr 01 17:15:28 bboy vpp[986]: vpp[986]: dpdk: I40E_DRIVER: i40e_set_rx_function(): Using Vector AVX2 Scattered (port 1).
+Apr 01 17:15:28 bboy vpp[986]: dpdk: I40E_DRIVER: i40e_set_rx_function(): Using Vector AVX2 Scattered (port 2).
+Apr 01 17:15:28 bboy vpp[986]: dpdk: I40E_DRIVER: i40e_set_rx_function(): Using Vector AVX2 Scattered (port 3).
+Apr 01 17:15:28 bboy vpp[986]: dpdk: I40E_DRIVER: i40e_set_rx_function(): Using Vector AVX2 Scattered (port 1).
+```
+Una línia clau és `Using IOMMU type 1 (Type 1)`. Això confirma que el nucli de Debian ha reconegut la configuració de la BIOS (VT-d) i que el mòdul `vfio_pci` té el control total del maquinari. El `Type 1` és el mode més segur i eficient de fer un pass-through de targetes PCIe a Linux. L'altra és `Using Vector AVX2 Scattered`. Apareix gràcies a que hem activat el _Hardware Prefetcher_ i el _Adjacent Cache Line Prefetch_ a la BIOS. `Vector AVX2` significa que VPP està utilitzant les instruccions SIMD (_Single Instruction Multiple Data_) per processar paquets en blocs. `Scattered` indica que el controlador DPDK (i40e per a les targetes Intel X710) pot gestionar paquets que estiguin fragmentats a la memòria de forma molt ràpida.
+
 ## Dimensionat de _hugepages_
 Proposem els següents arxiu `etc/sysctl.d/80-vpp.conf`:
 ```
