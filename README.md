@@ -56,14 +56,13 @@ $ make install-dep
 $ make build-release
 $ make pkg-deb
 ```
-Atés que _beastie_ necessita la llibreria `libmemif.so`, la compilem i instal·lem :
+Atés que _beastie_ necessita la llibreria `libmemif.so`, la compilem:
 ```bash
 $ cd /root/vpp/extras/libmemif
 $ mkdir build
 $ cd build
 $ cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
 $ make -j"$(nproc)"
-$ make install
 ```
 Dimensionem els _hugepages_ segons el maquinari. Consulteu l'appendix B per obtenir informació sobre el cas d'APU3. Instal·lem tots els paquets que acabem de generar. Amb això ens assegurem que en particular, la lliberia `libmemif.so` hi serà:
 ```bash
@@ -272,3 +271,5 @@ Si volem aplicar tots els arxius _system_ del sistema i verificar possibles conf
 ```bash
 $ sysctl --system
 ```
+## Configuració de ASUSTeK P10S-I
+Disposem d'un altre maquinari. Es tracta d'un servidor amb una placa base ASUSTeK, P10S-I Series, BIOS American Megatrends Inc. versió 4602, 32GB de RAM i un processador Intel(R) Xeon(R) CPU E3-1220 v5 @ 3.00GHz. Per tal d'optimitzar aquest maquinari per treballar amb VPP, modifiquem els seguents paràmetres de BIOS:
