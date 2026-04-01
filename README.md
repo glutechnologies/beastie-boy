@@ -272,4 +272,88 @@ Si volem aplicar tots els arxius _system_ del sistema i verificar possibles conf
 $ sysctl --system
 ```
 ## Configuració de ASUSTeK P10S-I
-Disposem d'un altre maquinari. Es tracta d'un servidor amb una placa base ASUSTeK, P10S-I Series, BIOS American Megatrends Inc. versió 4602, 32GB de RAM i un processador Intel(R) Xeon(R) CPU E3-1220 v5 @ 3.00GHz. Per tal d'optimitzar aquest maquinari per treballar amb VPP, modifiquem els seguents paràmetres de BIOS:
+Disposem d'un altre maquinari. Es tracta d'un servidor amb una placa base ASUSTeK, P10S-I Series, BIOS American Megatrends Inc. versió 4602, 32GB de RAM i un processador Intel(R) Xeon(R) CPU E3-1220 v5 @ 3.00GHz. Per tal d'optimitzar aquest maquinari per treballar amb VPP, modifiquem els seguents paràmetres de BIOS (Advanced): 
+
++---------------------------------+-------------------------------------------+----------------+
+| CATEGORIA                       | OPCIÓ DE LA BIOS                          | CONFIGURACIÓ   |
++---------------------------------+-------------------------------------------+----------------+
+|  Virtualització i Bus PCIe      | Intel Virtualization Technology (VT-x)    | [Enabled]      |
+|                                 | PCI Latency Timer                         | [32 PCI clock] |
++---------------------------------+-------------------------------------------+----------------+
+|  Gestió d'Energia i Freqüència  | C-States (CPU Power Management)           | [Disabled]     |
+|                                 | Intel SpeedStep                           | [Disabled]     |
+|                                 | Intel Speed Shift Technology              | [Disabled]     |
+|                                 | Turbo Mode (Turbo Boost)                  | [Disabled]     |
+|                                 | DMI Link ASPM Control                     | [Disabled]     |
++---------------------------------+-------------------------------------------+----------------+
+| Rendiment del Processador       | Hardware Prefetcher                       | [Enabled]      |
+|                                 | Adjacent Cache Line Prefetch              | [Enabled]      |
+|                                 | CPU AES (AES-NI)                          | [Enabled]      |
++---------------------------------+-------------------------------------------+----------------+
+| Funcions de Seguretat           | SW Guard Extensions (Intel SGX)           | [Disabled]     |
+|                                 | Intel TXT Support                         | [Disabled]     |
++---------------------------------+-------------------------------------------+----------------+
+
+## Dimensionat de _hugepages_
+Proposem els següents arxiu `etc/sysctl.d/80-vpp.conf`:
+```
+# VPP on medium/large systems (32 GB RAM, 4 Cores)
+# Generous values for high throughput and stable memory allocation.
+
+# Reserve hugepages for DPDK/VPP (2 MB pages)
+# 4096 * 2 MB = 8 GB reserved for hugepages. 
+# (Augmentat per suportar més trànsit i taules BGP grans sense ofegar els 32GB)
+vm.nr_hugepages = 4096
+
+# Allow large shared-memory and hugepage-backed mappings
+# Doblat per evitar límits en entorns amb moltes interfícies o contenidors
+vm.max_map_count = 524288
+
+# Keep swapping low; VPP/DPDK hate latency spikes
+vm.swappiness = 10
+
+# Leave some room before the kernel starts reclaim pressure
+# 512 MB de matalàs lliure per evitar aturades d'assignació al kernel (estava a 128MB)
+vm.min_free_kbytes = 524288
+
+# Permit enough shared memory for VPP segments, memif, stats, etc.
+# Permetem fins a 16 GB de memòria compartida (aprox la meitat de la RAM)
+kernel.shmmax = 17179869184
+kernel.shmall = 4194304
+
+# Larger socket buffers help control-plane/API tools and capture paths
+# Augmentem els màxims a 64 MB per suportar grans ràfegues
+net.core.rmem_default = 524288
+net.core.rmem_max = 67108864
+net.core.wmem_default = 524288
+net.core.wmem_max = 67108864
+
+# Backlog for bursts
+# Molt més espai per a ràfegues, adequat per a una màquina que pot processar ràpid (4 cores)
+net.core.netdev_max_backlog = 65536
+
+# More room for local sockets used by agents/tools around VPP
+net.unix.max_dgram_qlen = 2048
+```
+i per `etc/sysctl.d/81-vpp-netlink.conf`:
+```
+# Netlink tuning for VPP integration on a robust host.
+# Ample headroom for massive interface churn, large BGP routes, neighbors and startup sync.
+
+net.core.rmem_default = 524288
+net.core.rmem_max = 67108864
+net.core.wmem_default = 524288
+net.core.wmem_max = 67108864
+
+# Help user space drain bursts of rtnetlink events
+net.core.netdev_max_backlog = 65536
+```
+Apliquem aquests arxius:
+```bash
+$ sysctl -p -f /etc/sysctl.d/80-vpp.conf
+$ sysctl -p -f /etc/sysctl.d/81-vpp-netlink.conf
+```
+Si volem aplicar tots els arxius _system_ del sistema i verificar possibles conflictes:
+```bash
+$ sysctl --system
+```
