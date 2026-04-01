@@ -49,7 +49,14 @@ $ git clone https://gerrit.fd.io/r/vpp
 $ cd vpp
 $ git checkout v26.02
 ```
-Compilem la llibreria dinàmica `libmemif.so`:
+Afegim les dependències per la compilació, provem el _build_ i empaquetem VPP:
+```bash
+$ cd /root/vpp
+$ make install-dep
+$ make build-release
+$ make pkg-deb
+```
+Atés que _beastie_ necessita la llibreria `libmemif.so`, la compilem i instal·lem :
 ```bash
 $ cd /root/vpp/extras/libmemif
 $ mkdir build
@@ -58,21 +65,19 @@ $ cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
 $ make -j"$(nproc)"
 $ make install
 ```
-Afegim les dependències per la compilació, provem el _build_ i empaquetem VPP:
-```bash
-$ cd /root/vpp
-$ make install-dep
-$ make build-release
-$ make pkg-deb
-```
 Dimensionem els _hugepages_ segons el maquinari. Consulteu l'appendix B per obtenir informació sobre el cas d'APU3. Instal·lem tots els paquets que acabem de generar. Amb això ens assegurem que en particular, la lliberia `libmemif.so` hi serà:
 ```bash
-$ cd build-root
+$ cd /root/vpp/build-root
 $ dpkg -i ./*.deb
 ```
 Si no s'han instal·lat dependències per `dpkg`, podem forçar la seva instal·lació:
 ```bash
 $ apt -f install
+```
+Instal·lem la llibreria `libmemif.so`:
+```bash
+$ cd /root/vpp/extras/libmemif/build
+$ make install
 ```
 
 # Appendix B: Plataforma de desenvolupament APU3 amb Debian 13
