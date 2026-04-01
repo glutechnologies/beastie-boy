@@ -38,7 +38,7 @@ $ make clean
 # Appendix A: Instal·lació de VPP
 Compilar la versió estable de VPP 26.02 i crearem un paquet per Debian. Partirem de la hiopòtesi qyue en el sistema no hi ha vi VPP ni DPDK instal·lats.
 
-Instal·lem primers els paquets mínims per compilar-lo. Totes les comandes s'executem de manera implícita sotya _root_:
+Instal·lem primers els paquets mínims per compilar-lo. Totes les comandes s'executem de manera implícita amb _root_:
 ```bash
 $ apt update
 $ apt install -y git make sudo cmake build-essential
@@ -271,7 +271,7 @@ Si volem aplicar tots els arxius _system_ del sistema i verificar possibles conf
 ```bash
 $ sysctl --system
 ```
-## Configuració de ASUSTeK P10S-I
+# Appendix C: Configuració d'ASUSTeK P10S-I am Debian 13
 Disposem d'un altre maquinari. Es tracta d'un servidor amb una placa base ASUSTeK, P10S-I Series, BIOS American Megatrends Inc. versió 4602, 32GB de RAM i un processador Intel(R) Xeon(R) CPU E3-1220 v5 @ 3.00GHz. Aquest servidor està equipat amb dues targetes de xarxa integrades Intel I210 i una targeta PCIe Intel X710, de quatre ports SFP+.
 
 Per tal d'optimitzar aquest maquinari per treballar amb VPP, modifiquem els seguents paràmetres de BIOS (Advanced): 
@@ -290,6 +290,8 @@ Per tal d'optimitzar aquest maquinari per treballar amb VPP, modifiquem els segu
 | Rendiment del Processador | CPU AES (AES-NI) | [Enabled] | 
 | Funcions de Seguretat | SW Guard Extensions (Intel SGX) | [Disabled] | 
 | Funcions de Seguretat | Intel TXT Support | [Disabled] |
+
+Procedim a una instal·lació de Debian 13 similar al de l'APU3. En aquest cas, no cal un accés a port sèrie.
 
 Afegim una entrada a `/etc/default/grub`:
 ```
