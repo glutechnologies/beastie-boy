@@ -107,6 +107,21 @@ bool boy_is_span_source_candidate(const boy_interface_entry_t *entry)
 	return true;
 }
 
+bool boy_is_physical_interface(const boy_interface_entry_t *entry)
+{
+	if (entry->type != IF_API_TYPE_HARDWARE) {
+		return false;
+	}
+	if (strcmp(entry->interface_name, "local0") == 0) {
+		return false;
+	}
+	if (strncmp(entry->interface_name, "memif", 5) == 0) {
+		return false;
+	}
+
+	return true;
+}
+
 const char *boy_span_state_device(vapi_enum_span_state state)
 {
 	switch (state) {
@@ -174,10 +189,18 @@ static vapi_error_e boy_sw_interface_dump_cb(struct vapi_ctx_s *ctx, void *callb
 	entry = &table->entries[table->count++];
 	entry->sw_if_index = reply->sw_if_index;
 	entry->type = reply->type;
+	entry->flags = reply->flags;
+	entry->link_speed = reply->link_speed;
 	boy_copy_api_string(entry->interface_name, sizeof(entry->interface_name),
 			    reply->interface_name, sizeof(reply->interface_name));
 	boy_copy_api_string(entry->interface_dev_type, sizeof(entry->interface_dev_type),
 			    reply->interface_dev_type, sizeof(reply->interface_dev_type));
+	boy_copy_api_string(entry->card_family, sizeof(entry->card_family),
+			    reply->interface_dev_type, sizeof(reply->interface_dev_type));
+	snprintf(entry->ethernet_address, sizeof(entry->ethernet_address),
+		 "%02x:%02x:%02x:%02x:%02x:%02x", reply->l2_address[0], reply->l2_address[1],
+		 reply->l2_address[2], reply->l2_address[3], reply->l2_address[4],
+		 reply->l2_address[5]);
 	return VAPI_OK;
 }
 

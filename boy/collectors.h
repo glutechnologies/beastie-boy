@@ -12,6 +12,10 @@ typedef struct boy_interface_entry {
 	char interface_name[65];
 	vapi_enum_if_type type;
 	char interface_dev_type[65];
+	vapi_enum_if_status_flags flags;
+	u32 link_speed;
+	char ethernet_address[18];
+	char card_family[65];
 } boy_interface_entry_t;
 
 typedef struct boy_interface_table {
@@ -53,6 +57,7 @@ const char *boy_find_interface_name(const boy_interface_table_t *table, u32 sw_i
 
 const char *boy_if_type_to_string(vapi_enum_if_type type);
 bool boy_is_span_source_candidate(const boy_interface_entry_t *entry);
+bool boy_is_physical_interface(const boy_interface_entry_t *entry);
 const char *boy_span_state_device(vapi_enum_span_state state);
 const char *boy_span_state_l2(vapi_enum_span_state state, bool is_l2);
 

@@ -12,6 +12,7 @@ endif
 endif
 
 CC?=gcc
+INSTALL?=install
 BIN_DIR=bin
 OBJ_ROOT=$(BIN_DIR)/obj/release
 DEBUG_OBJ_ROOT=$(BIN_DIR)/obj/debug
@@ -35,6 +36,8 @@ VAPI_CFLAGS?=
 VAPI_LIBS?=-lvapiclient
 VPP_COMPAT_CPPFLAGS?=
 DEPFLAGS?=-MMD -MP
+PREFIX?=/usr/local
+BINDIR?=$(PREFIX)/bin
 CFLAGS=$(WARN_CFLAGS) $(OPT_CFLAGS) $(PROJECT_INCLUDES) $(EXTRA_CPPFLAGS) $(EXTRA_CFLAGS) $(PCAP_CFLAGS) $(MEMIF_CFLAGS)
 DEBUG_CFLAGS=$(WARN_CFLAGS) $(DEBUG_OPT_CFLAGS) $(PROJECT_INCLUDES) $(EXTRA_CPPFLAGS) $(EXTRA_CFLAGS) $(PCAP_CFLAGS) $(MEMIF_CFLAGS)
 BOY_CFLAGS=$(WARN_CFLAGS) $(OPT_CFLAGS) $(BOY_INCLUDES) $(EXTRA_CPPFLAGS) $(VPP_COMPAT_CPPFLAGS) $(EXTRA_CFLAGS) $(PCAP_CFLAGS) $(VAPI_CFLAGS)
@@ -113,9 +116,17 @@ debug-beastie: $(BEASTIE_DEBUG_BIN)
 
 debug-boy: $(BOY_DEBUG_BIN)
 
+install: all
+	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
+	$(INSTALL) -m 0755 "$(BEASTIE_BIN)" "$(DESTDIR)$(BINDIR)/beastie"
+	$(INSTALL) -m 0755 "$(BOY_BIN)" "$(DESTDIR)$(BINDIR)/boy"
+
+uninstall:
+	rm -f "$(DESTDIR)$(BINDIR)/beastie" "$(DESTDIR)$(BINDIR)/boy"
+
 clean:
 	rm -rf $(BIN_DIR) $(CONFIG_MK)
 
-.PHONY: all clean reconfigure debug debug-beastie debug-boy
+.PHONY: all clean reconfigure debug debug-beastie debug-boy install uninstall
 
 -include $(DEPS)

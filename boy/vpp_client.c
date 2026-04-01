@@ -5,11 +5,13 @@
 #include <vapi/interface.api.vapi.h>
 #include <vapi/memif.api.vapi.h>
 #include <vapi/span.api.vapi.h>
+#include <vapi/vlib.api.vapi.h>
 #include <vapi/vpe.api.vapi.h>
 
 #include <string.h>
 
 DEFINE_VAPI_MSG_IDS_VPE_API_JSON;
+DEFINE_VAPI_MSG_IDS_VLIB_API_JSON;
 DEFINE_VAPI_MSG_IDS_INTERFACE_API_JSON;
 DEFINE_VAPI_MSG_IDS_MEMIF_API_JSON;
 DEFINE_VAPI_MSG_IDS_SPAN_API_JSON;

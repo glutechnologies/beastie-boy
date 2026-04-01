@@ -64,7 +64,7 @@ $ cd build
 $ cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
 $ make -j"$(nproc)"
 ```
-Dimensionem els _hugepages_ segons el maquinari. Consulteu l'appendix B per obtenir informació sobre el cas d'APU3. Instal·lem tots els paquets que acabem de generar. Amb això ens assegurem que en particular, la lliberia `libmemif.so` hi serà:
+Dimensionem els _hugepages_ segons el maquinari. Consulteu l'appendix B i C per obtenir informació sobre el cas d'APU3 i ASUSTeK P10S-I. Instal·lem tots els paquets que acabem de generar. Amb això ens assegurem que en particular, la lliberia `libmemif.so` hi serà:
 ```bash
 $ cd /root/vpp/build-root
 $ dpkg -i ./*.deb

@@ -3,6 +3,7 @@
 #include "boy_log.h"
 #include "cli_options.h"
 #include "commands/memif_cmd.h"
+#include "commands/phy_cmd.h"
 #include "commands/span_cmd.h"
 #include "commands/version_cmd.h"
 
@@ -19,6 +20,10 @@ int boy_run(boy_mode_t mode, app_log_level_t log_level, uint32_t span_unset_if_i
 		return boy_unset_span(span_unset_if_index);
 	case BOY_MODE_SHOW_MEMIF:
 		return boy_show_memif();
+	case BOY_MODE_CREATE_MEMIF:
+		return boy_create_memif_if_missing();
+	case BOY_MODE_SHOW_PHY:
+		return boy_show_phy();
 	case BOY_MODE_SHOW_SPAN:
 		return boy_show_span();
 	case BOY_MODE_SHOW_VERSION:

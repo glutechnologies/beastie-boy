@@ -30,6 +30,12 @@ static void boy_print_usage(const char *progname)
 		"  -m, --show-memif\n"
 		"      Query the current memif configuration using libvapi.\n"
 		"\n"
+		"  -p, --show-phy\n"
+		"      Query physical interface details via libvapi.\n"
+		"\n"
+		"  -c, --create-memif\n"
+		"      Create a default memif interface only if no memif exists.\n"
+		"\n"
 		"  -u, --unset-span <if-index>\n"
 		"      Remove all SPAN entries configured on source interface\n"
 		"      with VPP internal sw_if_index=<if-index>.\n"
@@ -42,10 +48,13 @@ static void boy_print_usage(const char *progname)
 		"  %s\n"
 		"  %s --show-span\n"
 		"  %s --show-memif\n"
+		"  %s --show-phy\n"
+		"  %s --create-memif\n"
 		"  %s --unset-span 5\n"
 		"  %s --set-span --iface-idx 1 --memif memif0/0 --device both\n"
 		"  %s --log-level debug\n",
-		progname, progname, progname, progname, progname, progname, progname);
+		progname, progname, progname, progname, progname, progname, progname, progname,
+		progname);
 }
 
 static int boy_parse_if_index(const char *value, uint32_t *result)
@@ -93,7 +102,9 @@ boy_cli_parse_status_t boy_parse_cli_options(int argc, char *argv[], boy_cli_opt
 		{"log-level", required_argument, NULL, 'l'},
 		{"memif", required_argument, NULL, 'M'},
 		{"device", required_argument, NULL, 'D'},
+		{"create-memif", no_argument, NULL, 'c'},
 		{"show-memif", no_argument, NULL, 'm'},
+		{"show-phy", no_argument, NULL, 'p'},
 		{"show-span", no_argument, NULL, 's'},
 		{"set-span", no_argument, NULL, 'S'},
 		{"unset-span", required_argument, NULL, 'u'},
@@ -108,8 +119,11 @@ boy_cli_parse_status_t boy_parse_cli_options(int argc, char *argv[], boy_cli_opt
 	options->set_span_memif_name = NULL;
 	options->set_span_device_mode = BOY_SPAN_DEVICE_BOTH;
 
-	while ((opt = getopt_long(argc, argv, "hI:l:D:M:msSu:v", long_options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "chI:l:D:M:mpsSu:v", long_options, NULL)) != -1) {
 		switch (opt) {
+		case 'c':
+			options->mode = BOY_MODE_CREATE_MEMIF;
+			break;
 		case 'I':
 			if (boy_parse_if_index(optarg, &options->set_span_if_index) != 0) {
 				fprintf(stderr, "Invalid source interface index: %s\n", optarg);
@@ -141,6 +155,9 @@ boy_cli_parse_status_t boy_parse_cli_options(int argc, char *argv[], boy_cli_opt
 			break;
 		case 'm':
 			options->mode = BOY_MODE_SHOW_MEMIF;
+			break;
+		case 'p':
+			options->mode = BOY_MODE_SHOW_PHY;
 			break;
 		case 's':
 			options->mode = BOY_MODE_SHOW_SPAN;
