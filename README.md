@@ -2,37 +2,51 @@
 Aquest projecte té objectiu desenvolupar dues eines _beastie_ i _boy_. La primera volca les dades en memòria compartida amb [VPP](https://fd.io/) a través de `memif`, un tipus d'interfície de memòria directa de molt alt rendiment que es pot utilitzar entre instàncies de FD.io VPP. Posteriorment _beastie_ genera un arxiu de captura  dels paquets o trames intercanviades per una interfície de xarxa en mode _span/mirror_. La segona permet configurar VPP per activar el mode _span/mirror_ a través de la seva API.
 
 ## Compilació
-El projecte incorpora un script `./configure` personalitzat per validar dependències abans de compilar i generar `config.mk`. Fa comprovacions de _headers_ i enllaç per `pcap`, `memif` i `vapi`, i també detecta la versió de VPP suportada.
+El projecte usa ara un esquema de compilació inspirat en VPP: un `Makefile` superior orquestra la compilació, però el backend real és `CMake` amb `Ninja`, i els artefactes es generen sota `build-root/`.
 
-Iniciem el procés amb la configuració de l'entorn de compilació:
+Per compilar la versió `release`:
 
 ```bash
-$ ./configure
+$ make build
 ```
-Es generarà el fitxer `config.mk`, inclòs després pel `Makefile`, amb _flags_ detectats (`PCAP_*`, `MEMIF_*`, `VAPI_*`), metadades de compatibilitat VPP (`VPP_API_VERSION`, `VPP_API_SERIES`) i macros de compilació (`VPP_COMPAT_CPPFLAGS`). Diposa d'algunes opcions útils:
+Els binaris i fitxers intermedis queden a:
 
-- `--quiet`: redueix la sortida
-- `--supported-vpp-series=2506,2510,2602`: defineix la llista de sèries admeses
-- `--allow-unsupported-vpp`: permet continuar si la sèrie detectada no és a la llista
+- `build-root/build-beastie-boy-release-native/`
+- `build-root/install-beastie-boy-release-native/`
 
-La detecció de versió VPP es fa primer amb `pkg-config`; si no està disponible, fa _fallback_ amb `dpkg-query` (habitual en instal·lacions VPP via `.deb`).
-
-Si tot ha anat bé, podem iniciar la compilació:
+La versió del codi de `beastie` i `boy` s’obté directament del repositori Git amb `git describe --tags --always --dirty`, de manera que queda basada en `tag + commit` quan hi ha tags disponibles. La podeu consultar amb:
 
 ```bash
-$ make
+$ build-root/build-beastie-boy-release-native/beastie --version
+$ build-root/build-beastie-boy-release-native/boy --version
 ```
-`make` de fet invoca `./configure` i compila els dos binaris `bin/beastie` i `bin/boy`. El `Makefile` actual és incremental i compila per objectes (`.o`), genera dependències automàtiques (`.d`) amb `-MMD -MP` i detecta canvis en `.c` i `.h` sense necessitat de `make clean`.
 
-Si estem duent a terme tasques de depurat, podem compilar amb `-O0 -g`, és a dir, sense optimitzacions agressives:
+Si estem duent a terme tasques de depurat:
 
 ```bash
-$ make debug
+$ make build-debug
 ```
-Per reconfigurar, eliminar binaris, arxius objecte i `config.mk`:
+Per instal·lar sota el prefix configurat per CMake:
+
 ```bash
-$ make reconfigure
+$ make build
+$ make -C build-root TAG=release INSTALL_DIR=/usr/local install
+
+```
+
+Per generar paquets:
+
+```bash
+$ make package
+$ make package-deb
+```
+Els artefactes queden dins `build-root/build-beastie-boy-<tag>-native/`.
+
+Per reconfigurar o netejar:
+
+```bash
 $ make clean
+$ make configure
 ```
 
 # Appendix A: Instal·lació de VPP

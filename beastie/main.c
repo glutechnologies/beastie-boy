@@ -10,6 +10,9 @@ int beastie_run(beastie_mode_t mode, app_log_level_t log_level,
 	beastie_set_log_level(log_level);
 
 	switch (mode) {
+	case BEASTIE_MODE_SHOW_VERSION:
+		app_print_version(stdout, "beastie");
+		return 0;
 	case BEASTIE_MODE_CAPTURE:
 	default:
 		return beastie_run_capture(capture_config);

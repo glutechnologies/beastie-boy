@@ -13,6 +13,7 @@ typedef enum boy_mode {
 	BOY_MODE_SET_SPAN = 4,
 	BOY_MODE_CREATE_MEMIF = 5,
 	BOY_MODE_SHOW_PHY = 6,
+	BOY_MODE_SHOW_CODE_VERSION = 7,
 } boy_mode_t;
 
 typedef enum boy_span_device_mode {

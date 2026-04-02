@@ -14,6 +14,9 @@ int boy_run(boy_mode_t mode, app_log_level_t log_level, uint32_t span_unset_if_i
 	boy_set_log_level(log_level);
 
 	switch (mode) {
+	case BOY_MODE_SHOW_CODE_VERSION:
+		app_print_version(stdout, "boy");
+		return 0;
 	case BOY_MODE_SET_SPAN:
 		return boy_set_span(span_set_if_index, span_set_memif_name, span_set_device_mode);
 	case BOY_MODE_UNSET_SPAN:

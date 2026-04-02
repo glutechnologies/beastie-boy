@@ -16,11 +16,14 @@ static void boy_print_usage(const char *progname)
 		"  -h, --help\n"
 		"      Show this help message and exit.\n"
 		"\n"
+		"  -V, --version\n"
+		"      Show the Boy code version derived from Git tags and commit.\n"
+		"\n"
 		"  -l, --log-level <error|warning|info|debug>\n"
 		"      Set the message verbosity.\n"
 		"      Default: info\n"
 		"\n"
-		"  -v, --show-version\n"
+		"  -v, --show-vpp\n"
 		"      Query the current VPP version using libvapi.\n"
 		"      This is the default action if no option is given.\n"
 		"\n"
@@ -102,13 +105,14 @@ boy_cli_parse_status_t boy_parse_cli_options(int argc, char *argv[], boy_cli_opt
 		{"log-level", required_argument, NULL, 'l'},
 		{"memif", required_argument, NULL, 'M'},
 		{"device", required_argument, NULL, 'D'},
+		{"version", no_argument, NULL, 'V'},
 		{"create-memif", no_argument, NULL, 'c'},
 		{"show-memif", no_argument, NULL, 'm'},
 		{"show-phy", no_argument, NULL, 'p'},
 		{"show-span", no_argument, NULL, 's'},
 		{"set-span", no_argument, NULL, 'S'},
 		{"unset-span", required_argument, NULL, 'u'},
-		{"show-version", no_argument, NULL, 'v'},
+		{"show-vpp", no_argument, NULL, 'v'},
 		{0, 0, 0, 0},
 	};
 
@@ -119,8 +123,11 @@ boy_cli_parse_status_t boy_parse_cli_options(int argc, char *argv[], boy_cli_opt
 	options->set_span_memif_name = NULL;
 	options->set_span_device_mode = BOY_SPAN_DEVICE_BOTH;
 
-	while ((opt = getopt_long(argc, argv, "chI:l:D:M:mpsSu:v", long_options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "VchI:l:D:M:mpsSu:v", long_options, NULL)) != -1) {
 		switch (opt) {
+		case 'V':
+			options->mode = BOY_MODE_SHOW_CODE_VERSION;
+			break;
 		case 'c':
 			options->mode = BOY_MODE_CREATE_MEMIF;
 			break;

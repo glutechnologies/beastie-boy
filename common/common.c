@@ -1,8 +1,14 @@
 #include "common.h"
 
+#include "git_version.h"
+
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+
+#ifndef APP_GIT_VERSION
+#define APP_GIT_VERSION "unknown"
+#endif
 
 const char *app_log_level_name(app_log_level_t level)
 {
@@ -82,4 +88,14 @@ const char *app_format_bytes_compact(uint64_t bytes, char *buffer, size_t buffer
 
 	snprintf(buffer, buffer_size, "%.2f %s", value, units[unit_index]);
 	return buffer;
+}
+
+const char *app_git_version(void)
+{
+	return APP_GIT_VERSION;
+}
+
+void app_print_version(FILE *stream, const char *app_name)
+{
+	fprintf(stream, "%s %s\n", app_name, app_git_version());
 }
