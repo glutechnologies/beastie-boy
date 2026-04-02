@@ -1,52 +1,51 @@
 # Beastie-Boy
-This project aims to develop two tools, _beastie_ and _boy_. The first one receives data through shared memory with [VPP](https://fd.io/) using `memif`, a very high-performance memory interface that can be used between FD.io VPP instances. It then generates a capture file containing the packets or frames exchanged by a network interface in _span/mirror_ mode. The second tool configures VPP to enable _span/mirror_ mode through its API.
+Aquest projecte té com a objectiu desenvolupar dues eines, _beastie_ i _boy_. La primera volca les dades en memòria compartida amb [VPP](https://fd.io/) a través de `memif`, un tipus d'interfície de memòria directa de molt alt rendiment que es pot utilitzar entre instàncies de FD.io VPP. Posteriorment, genera un arxiu de captura dels paquets o trames intercanviats per una interfície de xarxa en mode _span/mirror_. La segona permet configurar VPP per activar el mode _span/mirror_ a través de la seva API.
 
-## Build
-The project uses a build scheme similar to VPP: a `Makefile` orchestrates the build, but the real backend is `CMake` with `Ninja`, and the build output is generated under `build-root/`. To build the `release` version:
+## Compilació
+El projecte usa un esquema de compilació similar a VPP: un `Makefile` orquestra la compilació, però el backend real és `CMake` amb `Ninja`, i el producte de la compilació es genera a `build-root/`. Per compilar la versió `release`:
 ```bash
 $ make build
 ```
-The binaries and intermediate files are placed in:
+Els binaris i fitxers intermedis queden a:
 
 * `build-root/build-beastie-boy-release-native/`
 * `build-root/install-beastie-boy-release-native/`
 
-The code version for `beastie` and `boy` is obtained directly from the Git repository with `git describe --tags --always --dirty`, so it is based on `tag + commit` when tags are available. You can query it with:
+La versió del codi de `beastie` i `boy` s’obté directament del repositori Git amb `git describe --tags --always --dirty`, de manera que queda basada en `tag + commit` quan hi ha tags disponibles. La podeu consultar amb:
 ```bash
 $ build-root/build-beastie-boy-release-native/beastie --version
 $ build-root/build-beastie-boy-release-native/boy --version
 ```
-If we are performing debugging tasks and want to enable debug symbols with low optimization levels:
+Si estem duent a terme tasques de depuració i volem activar _flags_ de símbols de depurat amb poques optimitzacions:
 ```bash
 $ make build-debug
 ```
-To install the binaries under the prefix configured by CMake:
+Per instal·lar els binaris sota el prefix configurat per CMake:
 ```bash
 $ make install
 ```
-To generate Debian packages:
+Per generar paquets de Debian:
 ```bash
 $ make package
 $ make package-deb
 ```
-The generated files are stored in `build-root/build-beastie-boy-<tag>-native/`. To clean and reconfigure:
+Els arxius generats es desen a `build-root/build-beastie-boy-<tag>-native/`. Per netejar i reconfigurar:
 ```bash
 $ make clean
 $ make configure
 ```
-
 ## boy
-This tool configures VPP _span/mirror_ functionality. It also provides information about physical interfaces and interfaces that support _span/mirror_. All actions performed by _boy_ through the VPP API are non-persistent. The first step is to create a `memif` interface.
+Aquesta és l'eina que permet configurar la funció _span/mirror_ de VPP. També permet obtenir informació sobre les interfícies físiques i les que suporten _span/mirror_. Totes les accions que du a terme _boy_ a través de l'API de VPP no són permanents. El primer és crear una interfície `memif`.
 ```bash
 $ boy -c
 [INFO] boy starting
 [INFO] created memif: id=0 socket-id=0 ring-size=1024 buffer-size=2048 sw_if_index=17
 ```
-Additional `memif` interfaces can also be created by specifying explicit parameters:
+També es poden crear més interfícies `memif` indicant paràmetres específics:
 ```bash
 $ boy --create-memif --id 1 --socket-id 0
 ```
-To show the details of the created interface:
+Per mostrar el detall de la interfície creada:
 ```bash
 $ boy -m
 [INFO] boy starting
@@ -54,7 +53,7 @@ Interface Name  Socket-ID  Flags
 --------------  ---------  -----
 memif0/0                0  none
 ```
-To display interface mappings and _span/mirror_ state:
+Per mostrar els _mapping_ d'interfícies i funció de _span/mirror_:
 ```bash
 $ boy -s
 [INFO] boy starting
@@ -65,11 +64,11 @@ TenGigabitEthernet1/0/1              2  hardware  dpdk      *            *      
 TenGigabitEthernet1/0/2              3  hardware  dpdk      *            *       * 
 TenGigabitEthernet1/0/3              4  hardware  dpdk      *            *       * 
 ```
-If we want to enable _span/mirror_ on interface `TenGigabitEthernet1/0/1` in both directions (tx+rx), we look at the interface index (`If-Index`):
+Si volem activar _span/mirror_ sobre la interfície `TenGigabitEthernet1/0/1` en les dues direccions (tx+rx), ens fixem en l'índex d'interfície (`If-Index`):
 ```bash
 $ boy -S --iface-idx 2 --memif memif0/0 --device both
 ```
-We can verify the applied configuration:
+Verifiquem la configuració aplicada:
 ```bash
 $ boy -s
 [INFO] boy starting
@@ -80,7 +79,7 @@ TenGigabitEthernet1/0/1              2  hardware  dpdk      memif0/0     both   
 TenGigabitEthernet1/0/2              3  hardware  dpdk      *            *       * 
 TenGigabitEthernet1/0/3              4  hardware  dpdk      *            *       *
 ```
-Finally, we can remove the _span/mirror_ configuration:
+Finalment, podem retirar la funció _span/mirror_:
 ```bash
 $ boy -u 2
 [INFO] boy starting
@@ -88,59 +87,59 @@ $ boy -u 2
 ```
 
 ## beastie
-This tool captures packets arriving on a `memif` interface and stores them in a `PCAP` file. It is normally used after creating a `memif` with `boy` and enabling a _span/mirror_ session to that interface inside VPP. `beastie` connects to the Unix domain socket specified with `--socket` or, if none is provided, to `/run/vpp/memif.sock`. Inside that socket it selects the `memif` interface by the given `id`. By default, it connects as the `slave` endpoint to the `memif` with `id=0` on `/run/vpp/memif.sock` and writes the capture to `capture.pcap`.
+Aquesta és l'eina que permet capturar els paquets que arriben a una interfície `memif` i els desa en un fitxer `PCAP`. Normalment s'utilitza després d'haver creat una `memif` amb `boy` i d'haver activat un _span/mirror_ cap a aquella interfície dins de VPP. `beastie` es connecta al Unix domain socket indicat amb `--socket` o, si no se n'indica cap, a `/run/vpp/memif.sock`. Dins d'aquest socket selecciona la interfície `memif` a partir de l'`id` indicat. Per defecte, es connecta com a extrem `slave` a la `memif` amb `id=0` i al socket `/run/vpp/memif.sock`, i escriu la captura a `capture.pcap`.
 ```bash
 $ beastie
 [INFO] beastie starting
 [INFO] capture output: capture.pcap
 [INFO] waiting for packets on memif...
 ```
-If we want to save the capture to a different file:
+Si volem desar la captura en un altre fitxer:
 ```bash
 $ beastie --write trace.pcap
 ```
-We can limit the capture to a specific size, for example 1 MiB:
+Podem limitar la captura a una mida concreta, per exemple 1 MiB:
 ```bash
 $ beastie --write trace.pcap --max-bytes 1048576
 ```
-If the VPP `memif` was created with a different identifier, it must be specified with `--id`:
+Si la `memif` de VPP s'ha creat amb un identificador diferent, cal indicar-lo amb `--id`:
 ```bash
 $ beastie --id 1 --write trace.pcap
 ```
-If VPP uses a different socket than the default one, it can also be specified explicitly:
+Si VPP utilitza un socket diferent del predeterminat, també es pot indicar explícitament:
 ```bash
 $ beastie --socket /run/vpp/custom.sock --write trace.pcap
 ```
-A typical workflow looks like this:
+Un flux típic de treball seria aquest:
 ```bash
 $ boy --create-memif --id 1 --socket-id 0
 $ boy -S --iface-idx 2 --memif memif0/1 --device both
 $ beastie --id 1 --write trace.pcap
 ```
-Pressing `Ctrl+C` starts the capture shutdown process; `beastie` closes the `PCAP` file cleanly and prints a summary with the captured bytes and packets.
+Amb `Ctrl+C` es pot iniciar l'aturada de la captura, `beastie` tanca correctament el fitxer `PCAP` i mostra un resum amb els bytes i paquets capturats.
 
-# Appendix A: Installing VPP
-We will build the stable VPP 26.02 release and create a Debian package from it. We assume that neither VPP nor DPDK is installed on the system.
+# Apèndix A: Instal·lació de VPP
+Compilarem la versió estable de VPP 26.02 i en crearem un paquet per a Debian. Partirem de la hipòtesi que en el sistema no hi ha ni VPP ni DPDK instal·lats.
 
-First, install the minimum packages required to build it. All commands are implicitly run as _root_:
+Instal·lem primer els paquets mínims per compilar-lo. Totes les comandes s'executen de manera implícita com a _root_:
 ```bash
 $ apt update
 $ apt install -y git make sudo cmake build-essential
 ```
-Clone the source code from the official repository:
+Clonem el codi font des del dipòsit oficial:
 ```bash
 $ git clone https://gerrit.fd.io/r/vpp
 $ cd vpp
 $ git checkout v26.02
 ```
-Install the build dependencies, build VPP, and package it:
+Afegim les dependències per la compilació, provem el _build_ i empaquetem VPP:
 ```bash
 $ cd /root/vpp
 $ make install-dep
 $ make build-release
 $ make pkg-deb
 ```
-Since _beastie_ requires the `libmemif.so` library, we build it as well:
+Atés que _beastie_ necessita la llibreria `libmemif.so`, la compilem:
 ```bash
 $ cd /root/vpp/extras/libmemif
 $ mkdir build
@@ -148,58 +147,58 @@ $ cd build
 $ cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr
 $ make -j"$(nproc)"
 ```
-Size the _hugepages_ according to the hardware. See appendices B and C for information about the APU3 and ASUSTeK P10S-I cases. Install all packages we just generated. This ensures that, in particular, the `libmemif.so` library is available:
+Dimensionem els _hugepages_ segons el maquinari. Consulteu els apèndixs B i C per obtenir informació sobre el cas d'APU3 i ASUSTeK P10S-I. Instal·lem tots els paquets que acabem de generar. Amb això ens assegurem que, en particular, la llibreria `libmemif.so` hi serà:
 ```bash
 $ cd /root/vpp/build-root
 $ dpkg -i ./*.deb
 ```
-If `dpkg` reports missing dependencies, we can force their installation:
+Si no s'han instal·lat dependències per `dpkg`, podem forçar la seva instal·lació:
 ```bash
 $ apt -f install
 ```
-Install the `libmemif.so` library:
+Instal·lem la llibreria `libmemif.so`:
 ```bash
 $ cd /root/vpp/extras/libmemif/build
 $ make install
 ```
 
-# Appendix B: APU3 Development Platform with Debian 13
-We have a PC Engines APU3D4 with 3 i211AT LAN ports, an AMD GX-412TC CPU, and 4 GB of DRAM. These network cards are compatible with DPDK. To install Debian 13, download a `netinst.iso` image from https://www.debian.org/CD/netinst/ and copy it to a USB drive:
+# Apèndix B: Plataforma de desenvolupament APU3 amb Debian 13
+Disposem d'una PC Engines APU3D4 amb 3 LAN i211AT / CPU AMD GX-412TC / 4 GB de DRAM. Aquestes targetes de xarxa són compatibles amb DPDK. Per instal·lar Debian 13 cal descarregar una imatge `netinst.iso` de https://www.debian.org/CD/netinst/ i copiar-la a una unitat USB:
 
 ```
 $ sudo dd if=debian-13.4.0-amd64-netinst.iso of=/dev/<sdX> bs=8M status=progress
 $ sudo sync
 ```
-Make sure `/dev/sdX` is the device that is not mounted, something like `/dev/sdb` or `/dev/sdc`.
-Use `picocom` to get a clean and colored serial console:
+Assegureu-vos que el dispositiu `/dev/sdX` és el que no està muntat: alguna cosa com `/dev/sdb` o `/dev/sdc`.
+Feu servir `picocom` per obtenir un mode de visualització agradable i amb colors:
 ```
 $ picocom -b 115200 /dev/ttyUSB0
-To send a TAB character, send it in hexadecimal: C-a C-w ==> 09
-To exit `picocom`: C-a C-x
+Per enviar un caràcter TAB, envieu-lo en hexadecimal: C-a C-w ==> 09
+Per sortir de `picocom`: C-a C-x
 ```
-Press F10 to access the boot menu. Boot from the inserted USB drive. Then press TAB to modify the boot parameters:
+Premeu F10 per accedir al menú d'arrencada. Arrenqueu des de la unitat USB inserida. Després, premeu TAB per modificar els paràmetres d'arrencada:
 ```
 -/install.amd/vmlinuz vga=788 initrd=/install.amd/gtk/initrd.gz --- quiet
 +/install.amd/vmlinuz vga=off initrd=/install.amd/gtk/initrd.gz --- quiet console=ttyS0,115200u8
 ```
-Follow the usual Debian installation procedure.
+Seguiu el procediment habitual d'instal·lació de Debian.
 
-## BIOS Update and Enabling IOMMU on APU3
-Since we want to use VPP with the `vfio-pci` module and that requires IOMMU, APU3 must support it at the BIOS level. We therefore consider updating the BIOS to a version that supports it. We assume Linux/Debian is already installed and perform the update from that operating system.
+## Actualització de BIOS i activació d'IOMMU a APU3
+Atés que volem usar VPP amb el mòdul `vfio-pci` i aquest requereix IOMMU, caldrà que APU3 el suporti a nivell de BIOS. Plantegem doncs l'actualització de la BIOS amb una versió que ho suporta. Suposarem que ja tenim instal·lat un Linux/Debian. Podem fer-ho des d'aquest sistema operatiu.
 
-First install `flashrom`:
+Primer cal instal·lar `flashrom`:
 
 ```bash
 $ apt update
 $ apt install flashrom
 ```
-`flashrom` must have write permissions to `/dev/mem`. Modern _kernels_ usually block access to this device even for the _root_ user. To allow it, edit `/etc/default/grub`. Under `GRUB_CMDLINE_LINUX_DEFAULT`, include the `iomem=relaxed` option. Then update the GRUB configuration with `update-grub`.
+`flashrom` cal que tingui drets d'escriptura al dispositiu `/dev/mem`. Els _kernels_ moderns acostumen a bloquejar l'accés a aquest dispositiu fins i tot per a l'usuari _root_. Per permetre-ho cal modificar `/etc/default/grub`. Sota la directiva `GRUB_CMDLINE_LINUX_DEFAULT` cal incloure l'opció `iomem=relaxed`. Actualitzem la configuració de GRUB amb `update-grub`.
 
-Now download the new ROM binary. IOMMU support is included starting with version v4.11.0.2:
+Ara baixem el nou binary de la ROM. La gestió de IOMMU s'inclou a partir de la v4.11.0.2:
 ```bash
 $ wget https://3mdeb.com/open-source-firmware/pcengines/apu3/apu3_v4.19.0.1.rom
 ```
-Now we can update it. The `flashrom` options are important:
+I ara ja podem actualitzar. Les opcions de `flashrom` són importants:
 ```bash
 $ flashrom -p internal:boardmismatch=force -c "W25Q64BV/W25Q64CV/W25Q64FV" -w apu3_v4.19.0.1.rom 
 flashrom unknown on Linux 6.1.0-37-amd64 (x86_64)
@@ -216,11 +215,11 @@ Reading old flash chip contents... done.
 Erasing and writing flash chip... Erase/write done.
 Verifying flash... VERIFIED.
 ```
-Once the BIOS is updated, enable the IOMMU feature. Access the APU3 BIOS menu through the serial port and enable the IOMMU option:
+Un cop actualitzada la BIOS, habilitem la funció IOMMU. Accedim per port sèrie de l'APU3 al menú de BIOS i habilitem l'opció IOMMU:
 ```
-2 Payload [setup] > Option v > Option s
+2 Payload [setup] > Opció v > Opció s
 ```
-If everything goes well, the system should show these kernel messages:
+Si tot va bé, el sistema hauria de mostrar aquests missatges de kernel:
 ```bash
 $ sudo dmesg | grep IOMMU
 [    0.743352] pci 0000:00:00.2: AMD-Vi: IOMMU performance counters supported
@@ -228,7 +227,7 @@ $ sudo dmesg | grep IOMMU
 [   22.300235] perf/amd_iommu: Detected AMD IOMMU #0 (2 banks, 4 counters/bank).
 [   22.354872] AMD-Vi: AMD IOMMUv2 loaded and initialized
 ```
-If VPP is installed correctly, we should see it detect the network interfaces with the `vfio-pci` driver:
+Si tenim VPP correctament instal·lat, podrem veure que detecta les interfícies de xarxa amb el driver `vfio-pci`:
 ```
 vpp# show hardware-interfaces 
               Name                Idx   Link  Hardware
@@ -298,8 +297,8 @@ GigabitEthernet3/0/0               2    down  GigabitEthernet3/0/0
     tx burst function: (not available)
     rx burst function: (not available)
 ```
-## _Hugepages_ sizing
-We propose the following `etc/sysctl.d/80-vpp.conf` file:
+## Dimensionat de _hugepages_
+Proposem el següent arxiu `etc/sysctl.d/80-vpp.conf`:
 ```
 # VPP on small-memory systems (APU3, 4 GB RAM)
 # Conservative values to avoid starving the OS.
@@ -333,7 +332,7 @@ net.core.netdev_max_backlog = 4096
 # More room for local sockets used by agents/tools around VPP
 net.unix.max_dgram_qlen = 512
 ```
-and for `etc/sysctl.d/81-vpp-netlink.conf`:
+i per `etc/sysctl.d/81-vpp-netlink.conf`:
 ```
 # Netlink tuning for VPP integration on a small host.
 # Enough headroom for interface churn, routes, neighbors and startup sync.
@@ -346,68 +345,67 @@ net.core.wmem_max = 33554432
 # Help user space drain bursts of rtnetlink events
 net.core.netdev_max_backlog = 4096
 ```
-Apply these files:
+Apliquem aquests arxius:
 ```bash
 $ sysctl -p -f /etc/sysctl.d/80-vpp.conf
 $ sysctl -p -f /etc/sysctl.d/81-vpp-netlink.conf
 ```
-If we want to apply all system sysctl files and verify possible conflicts:
+Si volem aplicar tots els arxius _system_ del sistema i verificar possibles conflictes:
 ```bash
 $ sysctl --system
 ```
+# Apèndix C: Configuració d'ASUSTeK P10S-I amb Debian 13
+Disposem d'un altre maquinari. Es tracta d'un servidor amb una placa base ASUSTeK, P10S-I Series, BIOS American Megatrends Inc. versió 4602, 32GB de RAM i un processador Intel(R) Xeon(R) CPU E3-1220 v5 @ 3.00GHz. Aquest servidor està equipat amb dues targetes de xarxa integrades Intel I210 i una targeta PCIe Intel X710, de quatre ports SFP+.
 
-# Appendix C: ASUSTeK P10S-I Configuration with Debian 13
-We have another hardware platform. It is a server with an ASUSTeK P10S-I Series motherboard, American Megatrends Inc. BIOS version 4602, 32 GB of RAM, and an Intel(R) Xeon(R) CPU E3-1220 v5 @ 3.00GHz processor. This server is equipped with two integrated Intel I210 network cards and one PCIe Intel X710 card with four SFP+ ports.
+Per tal d'optimitzar aquest maquinari per treballar amb VPP, modifiquem els següents paràmetres de BIOS (Advanced): 
 
-To optimize this hardware for use with VPP, we modify the following BIOS parameters (Advanced):
+| CATEGORIA | OPCIÓ DE LA BIOS | CONFIGURACIÓ | 
+| ----- | ----- | ----- | 
+| Virtualització i Bus PCIe | Intel Virtualization Technology (VT-x) | [Enabled] | 
+| Virtualització i Bus PCIe | PCI Latency Timer | [32 PCI clock] | 
+| Gestió d'Energia i Freqüència | C-States (CPU Power Management) | [Disabled] | 
+| Gestió d'Energia i Freqüència | Intel SpeedStep | [Disabled] | 
+| Gestió d'Energia i Freqüència | Intel Speed Shift Technology | [Disabled] | 
+| Gestió d'Energia i Freqüència | Turbo Mode (Turbo Boost) | [Disabled] | 
+| Gestió d'Energia i Freqüència | DMI Link ASPM Control | [Disabled] | 
+| Rendiment del Processador | Hardware Prefetcher | [Enabled] | 
+| Rendiment del Processador | Adjacent Cache Line Prefetch | [Enabled] | 
+| Rendiment del Processador | CPU AES (AES-NI) | [Enabled] | 
+| Funcions de Seguretat | SW Guard Extensions (Intel SGX) | [Disabled] | 
+| Funcions de Seguretat | Intel TXT Support | [Disabled] |
 
-| CATEGORY | BIOS OPTION | SETTING |
-| ----- | ----- | ----- |
-| Virtualization and PCIe Bus | Intel Virtualization Technology (VT-x) | [Enabled] |
-| Virtualization and PCIe Bus | PCI Latency Timer | [32 PCI clock] |
-| Power and Frequency Management | C-States (CPU Power Management) | [Disabled] |
-| Power and Frequency Management | Intel SpeedStep | [Disabled] |
-| Power and Frequency Management | Intel Speed Shift Technology | [Disabled] |
-| Power and Frequency Management | Turbo Mode (Turbo Boost) | [Disabled] |
-| Power and Frequency Management | DMI Link ASPM Control | [Disabled] |
-| Processor Performance | Hardware Prefetcher | [Enabled] |
-| Processor Performance | Adjacent Cache Line Prefetch | [Enabled] |
-| Processor Performance | CPU AES (AES-NI) | [Enabled] |
-| Security Features | SW Guard Extensions (Intel SGX) | [Disabled] |
-| Security Features | Intel TXT Support | [Disabled] |
+Procedim a una instal·lació de Debian 13 similar al de l'APU3. En aquest cas, no cal un accés a port sèrie.
 
-We proceed with a Debian 13 installation similar to the APU3 one. In this case, no serial port access is required.
-
-Add an entry to `/etc/default/grub`:
+Afegim una entrada a `/etc/default/grub`:
 ```
 GRUB_CMDLINE_LINUX_DEFAULT="quiet intel_iommu=on iommu=pt isolcpus=1-3 nohz_full=1-3 rcu_nocbs=1-3 processor.max_cstate=1 intel_idle.max_cstate=1"
 ```
-This does the following:
-* `intel_iommu=on iommu=pt`: Enables IOMMU (VT-d) and puts it in pass-through mode (`pt`). This gives the `vfio_pci` module direct and exclusive access to the network card.
-* `isolcpus=1-3`: Tells the OS not to schedule normal tasks on cores 1, 2, and 3. In `/etc/vpp/startup.conf` we will tell VPP to use cores 2 and 3 for packet processing and core 1 for the remaining tasks.
-* `nohz_full=1-3 i rcu_nocbs=1-3`: Removes clock and maintenance interrupts from those cores.
-* `processor.max_cstate=1 intel_idle.max_cstate=1`: Adds an extra safety layer to prevent Linux from trying to put the cores to sleep, complementing what we already configured in the BIOS.
+El que fa és:
+* `intel_iommu=on iommu=pt`: Activa l'IOMMU (VT-d) i el posa en mode "pass-through" (pt). Això dóna accés directe i exclusiu de la targeta de xarxa al mòdul `vfio_pci`
+* `isolcpus=1-3`: Diu a l'OS que no enviï cap tasca normal als nuclis 1, 2 i 3. A `/etc/vpp/startup.conf` li direm a VPP que usi els cores 2 i 3 per processar paquets i l'1 per la resta de tasques 
+* `nohz_full=1-3 i rcu_nocbs=1-3`: Elimina les interrupcions de rellotge i de manteniment del sistema operatiu sobre aquests nuclis
+* `processor.max_cstate=1 intel_idle.max_cstate=1`: És una capa extra de seguretat per forçar que Linux no intenti adormir els nuclis (complementant el que ja vam fer a la BIOS)
 
-Apply the changes:
+Apliquem els canvis:
 ```bash
 $ update-grub
 ```
-We will modify the `vpp` service so that it loads the `vfio_pci` module instead of `uio_pci_generic`. Debian 13 provides a new method to override services so updates do not overwrite them. Run:
+Modificarem el servei de `vpp` per tal que carregui el mòdul `vfio_pci` en lloc del `uio_pci_generic`. Debian 13 incorpora un nou mètode per modificar els serveis, de manera que les actualitzacions no els sobreescriguin. Executem:
 ```bash
 $ systemctl edit vpp.service
 ```
-An editor will open with the current file contents commented out. We need to modify a specific section of the file. Add these lines to remove the previous `ExecStartPre` entry and replace its value:
+S'obrirà un editor amb el contingut actual de l'arxiu comentat. Cal que el modifiquem en una zona concreta de l'arxiu. Hi afegim aquestes línies per eliminar l'anterior entrada `ExecStartPre` i modificar-ne el seu valor:
 ```
 [Service]
 ExecStartPre=
 ExecStartPre=-/sbin/modprobe vfio_pci
 ```
-Since the configuration we will use includes a log file at `/var/log/vpp/vpp.log`, create it because the default VPP installation does not create it. Apply the changes and restart VPP:
+Atés que la configuració que farem servir inclou un arxiu de log a `/var/log/vpp/vpp.log`, el creem perquè, per defecte, la instal·lació de VPP no el crea. Apliquem els canvis i reiniciem VPP:
 ```bash
 $ systemctl daemon-reload
 $ systemctl restart vpp
 ```
-If we inspect the service log, after the plugin loading phase we should see something similar to this:
+Si observem el log del servei, després de la fase de càrrega de plugins hauríem de veure alguna cosa similar a aquesta:
 ```
 Apr 01 17:15:21 bboy vpp[986]: vpp[986]: dpdk: EAL: Detected CPU lcores: 4
 Apr 01 17:15:21 bboy vpp[986]: dpdk: EAL: Detected CPU lcores: 4
@@ -432,50 +430,50 @@ Apr 01 17:15:28 bboy vpp[986]: dpdk: I40E_DRIVER: i40e_set_rx_function(): Using 
 Apr 01 17:15:28 bboy vpp[986]: dpdk: I40E_DRIVER: i40e_set_rx_function(): Using Vector AVX2 Scattered (port 3).
 Apr 01 17:15:28 bboy vpp[986]: dpdk: I40E_DRIVER: i40e_set_rx_function(): Using Vector AVX2 Scattered (port 1).
 ```
-One key line is `Using IOMMU type 1 (Type 1)`. This confirms that the Debian kernel recognized the BIOS configuration (VT-d) and that the `vfio_pci` module has full control over the hardware. `Type 1` is the safest and most efficient mode for PCIe pass-through on Linux. Another key line is `Using Vector AVX2 Scattered`. It appears thanks to enabling _Hardware Prefetcher_ and _Adjacent Cache Line Prefetch_ in the BIOS. `Vector AVX2` means VPP is using SIMD (_Single Instruction Multiple Data_) instructions to process packets in batches. `Scattered` indicates that the DPDK driver (`i40e` for Intel X710 cards) can efficiently handle packets fragmented in memory.
+Una línia clau és `Using IOMMU type 1 (Type 1)`. Això confirma que el nucli de Debian ha reconegut la configuració de la BIOS (VT-d) i que el mòdul `vfio_pci` té el control total del maquinari. El `Type 1` és el mode més segur i eficient de fer un pass-through de targetes PCIe a Linux. L'altra és `Using Vector AVX2 Scattered`. Apareix gràcies a que hem activat el _Hardware Prefetcher_ i el _Adjacent Cache Line Prefetch_ a la BIOS. `Vector AVX2` significa que VPP està utilitzant les instruccions SIMD (_Single Instruction Multiple Data_) per processar paquets en blocs. `Scattered` indica que el controlador DPDK (i40e per a les targetes Intel X710) pot gestionar paquets que estiguin fragmentats a la memòria de forma molt ràpida.
 
-## _Hugepages_ sizing
-We propose the following `etc/sysctl.d/80-vpp.conf` file:
+## Dimensionat de _hugepages_
+Proposem el següent arxiu `etc/sysctl.d/80-vpp.conf`:
 ```
 # VPP on medium/large systems (32 GB RAM, 4 Cores)
 # Generous values for high throughput and stable memory allocation.
 
 # Reserve hugepages for DPDK/VPP (2 MB pages)
 # 4096 * 2 MB = 8 GB reserved for hugepages. 
-# (Increased to support more traffic and large BGP tables without starving 32 GB of RAM)
+# (Augmentat per suportar més trànsit i taules BGP grans sense ofegar els 32GB)
 vm.nr_hugepages = 4096
 
 # Allow large shared-memory and hugepage-backed mappings
-# Doubled to avoid limits in environments with many interfaces or containers
+# Doblat per evitar límits en entorns amb moltes interfícies o contenidors
 vm.max_map_count = 524288
 
 # Keep swapping low; VPP/DPDK hate latency spikes
 vm.swappiness = 10
 
 # Leave some room before the kernel starts reclaim pressure
-# 512 MB of free-memory cushion to avoid allocation stalls in the kernel (was 128 MB)
+# 512 MB de matalàs lliure per evitar aturades d'assignació al kernel (estava a 128MB)
 vm.min_free_kbytes = 524288
 
 # Permit enough shared memory for VPP segments, memif, stats, etc.
-# Allow up to 16 GB of shared memory (roughly half of RAM)
+# Permetem fins a 16 GB de memòria compartida (aprox la meitat de la RAM)
 kernel.shmmax = 17179869184
 kernel.shmall = 4194304
 
 # Larger socket buffers help control-plane/API tools and capture paths
-# Increase the maximums to 64 MB to support large bursts
+# Augmentem els màxims a 64 MB per suportar grans ràfegues
 net.core.rmem_default = 524288
 net.core.rmem_max = 67108864
 net.core.wmem_default = 524288
 net.core.wmem_max = 67108864
 
 # Backlog for bursts
-# Much more room for bursts, suitable for a machine that can process traffic quickly (4 cores)
+# Molt més espai per a ràfegues, adequat per a una màquina que pot processar ràpid (4 cores)
 net.core.netdev_max_backlog = 65536
 
 # More room for local sockets used by agents/tools around VPP
 net.unix.max_dgram_qlen = 2048
 ```
-and for `etc/sysctl.d/81-vpp-netlink.conf`:
+i per `etc/sysctl.d/81-vpp-netlink.conf`:
 ```
 # Netlink tuning for VPP integration on a robust host.
 # Ample headroom for massive interface churn, large BGP routes, neighbors and startup sync.
@@ -488,12 +486,12 @@ net.core.wmem_max = 67108864
 # Help user space drain bursts of rtnetlink events
 net.core.netdev_max_backlog = 65536
 ```
-Apply these files:
+Apliquem aquests arxius:
 ```bash
 $ sysctl -p -f /etc/sysctl.d/80-vpp.conf
 $ sysctl -p -f /etc/sysctl.d/81-vpp-netlink.conf
 ```
-If we want to apply all system sysctl files and verify possible conflicts:
+Si volem aplicar tots els arxius _system_ del sistema i verificar possibles conflictes:
 ```bash
 $ sysctl --system
 ```
