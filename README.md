@@ -1,55 +1,89 @@
 # Beastie-Boy
-Aquest projecte té objectiu desenvolupar dues eines _beastie_ i _boy_. La primera volca les dades en memòria compartida amb [VPP](https://fd.io/) a través de `memif`, un tipus d'interfície de memòria directa de molt alt rendiment que es pot utilitzar entre instàncies de FD.io VPP. Posteriorment _beastie_ genera un arxiu de captura  dels paquets o trames intercanviades per una interfície de xarxa en mode _span/mirror_. La segona permet configurar VPP per activar el mode _span/mirror_ a través de la seva API.
+Aquest projecte té objectiu desenvolupar dues eines _beastie_ i _boy_. La primera volca les dades en memòria compartida amb [VPP](https://fd.io/) a través de `memif`, un tipus d'interfície de memòria directa de molt alt rendiment que es pot utilitzar entre instàncies de FD.io VPP. Posteriorment genera un arxiu de captura dels paquets o trames intercanviades per una interfície de xarxa en mode _span/mirror_. La segona permet configurar VPP per activar el mode _span/mirror_ a través de la seva API.
 
-## Compilació
-El projecte usa ara un esquema de compilació inspirat en VPP: un `Makefile` superior orquestra la compilació, però el backend real és `CMake` amb `Ninja`, i els artefactes es generen sota `build-root/`.
-
-Per compilar la versió `release`:
-
+# Compilació
+El projecte usa un esquema de compilació similar a VPP: un `Makefile` orquestra la compilació, però el backend real és `CMake` amb `Ninja`, i el producte de la compilació es genera a `build-root/`. Per compilar la versió `release`:
 ```bash
 $ make build
 ```
 Els binaris i fitxers intermedis queden a:
 
-- `build-root/build-beastie-boy-release-native/`
-- `build-root/install-beastie-boy-release-native/`
+* `build-root/build-beastie-boy-release-native/`
+* `build-root/install-beastie-boy-release-native/`
 
 La versió del codi de `beastie` i `boy` s’obté directament del repositori Git amb `git describe --tags --always --dirty`, de manera que queda basada en `tag + commit` quan hi ha tags disponibles. La podeu consultar amb:
-
 ```bash
 $ build-root/build-beastie-boy-release-native/beastie --version
 $ build-root/build-beastie-boy-release-native/boy --version
 ```
-
-Si estem duent a terme tasques de depurat:
-
+Si estem duent a terme tasques de depurat i volem activar _flags_ de ativació de símbols d depurat amb poques optimitzacions:
 ```bash
 $ make build-debug
 ```
-Per instal·lar sota el prefix configurat per CMake:
-
+Per instal·lar els binaris sota el prefix configurat per CMake:
 ```bash
 $ make build
 $ make -C build-root TAG=release INSTALL_DIR=/usr/local install
-
 ```
-
-Per generar paquets:
-
+Per generar paquets de Debian:
 ```bash
 $ make package
 $ make package-deb
 ```
-Els artefactes queden dins `build-root/build-beastie-boy-<tag>-native/`.
-
-Per reconfigurar o netejar:
-
+Els arxius generats es desen a `build-root/build-beastie-boy-<tag>-native/`. Per netejar i reconfigurar:
 ```bash
 $ make clean
 $ make configure
 ```
+# boy
+Aquesta és l'eina que permet configurar la funció _span_ de VPP. També permet obtenir informació sobre les interfícies físique i les que suporten _span_. Totes les accions que du a terme _boy_ a través de l'API de VPP no són permanents. El primer és crear una interfície `memif`.
+```bash
+$ boy -c
+[INFO] boy starting
+[INFO] created memif: id=0 socket-id=0 sw_if_index=17
+```
+Per mostrar el detall de la interfície creada:
+```bash
+$ boy -m
+[INFO] boy starting
+Interface Name  Socket-ID  Flags
+--------------  ---------  -----
+memif0/0                0  none
+```
+Per mostrar els _mapping_ d'interfícies i funció de _span_:
+```bash
+$ boy -s
+[INFO] boy starting
+Interface Name                If-Index  If-Type   Dev-Type  Destination  Device  L2
+----------------------------  --------  --------  --------  -----------  ------  --
+TenGigabitEthernet1/0/0              1  hardware  dpdk      *            *       * 
+TenGigabitEthernet1/0/1              2  hardware  dpdk      *            *       * 
+TenGigabitEthernet1/0/2              3  hardware  dpdk      *            *       * 
+TenGigabitEthernet1/0/3              4  hardware  dpdk      *            *       * 
+```
+Si volem activar _span_ sobre la interfície `TenGigabitEthernet1/0/1` en les dues direccions (tx+rx), ens fixem en l'índex d'interfície (`If-Index`):
+```bash
+$ boy --set-span --iface-idx 2 --memif memif0/0 --device both
+```
+Verifiquem la configuració aplicada:
+```bash
+$ boy -s
+[INFO] boy starting
+Interface Name                If-Index  If-Type   Dev-Type  Destination  Device  L2
+----------------------------  --------  --------  --------  -----------  ------  --
+TenGigabitEthernet1/0/0              1  hardware  dpdk      *            *       * 
+TenGigabitEthernet1/0/1              2  hardware  dpdk      memif0/0     both    * 
+TenGigabitEthernet1/0/2              3  hardware  dpdk      *            *       * 
+TenGigabitEthernet1/0/3              4  hardware  dpdk      *            *       *
+```
+Finalment, podem retirar la funció _span_:
+```bash
+$ boy -u 2
+[INFO] boy starting
+[INFO] removed 1 SPAN entry for source if-index=2 (TenGigabitEthernet1/0/1)
+```
 
-# Appendix A: Instal·lació de VPP
+# Apèndix A: Instal·lació de VPP
 Compilar la versió estable de VPP 26.02 i crearem un paquet per Debian. Partirem de la hiopòtesi qyue en el sistema no hi ha vi VPP ni DPDK instal·lats.
 
 Instal·lem primers els paquets mínims per compilar-lo. Totes les comandes s'executem de manera implícita amb _root_:
@@ -93,7 +127,7 @@ $ cd /root/vpp/extras/libmemif/build
 $ make install
 ```
 
-# Appendix B: Plataforma de desenvolupament APU3 amb Debian 13
+# Apèndix B: Plataforma de desenvolupament APU3 amb Debian 13
 Disposem d'una PC Engines APU3D4 amb 3 LAN i211AT / CPU AMD GX-412TC / 4 GB de DRAM. Aquestes targetes de xarxa són compatibles amb DPDK. Per instal·lar Debian 13 cal descarregar una imatge `netinst.iso` de https://www.debian.org/CD/netinst/ i copiar-la a una unitat USB:
 
 ```
@@ -285,7 +319,7 @@ Si volem aplicar tots els arxius _system_ del sistema i verificar possibles conf
 ```bash
 $ sysctl --system
 ```
-# Appendix C: Configuració d'ASUSTeK P10S-I am Debian 13
+# Apèndix C: Configuració d'ASUSTeK P10S-I am Debian 13
 Disposem d'un altre maquinari. Es tracta d'un servidor amb una placa base ASUSTeK, P10S-I Series, BIOS American Megatrends Inc. versió 4602, 32GB de RAM i un processador Intel(R) Xeon(R) CPU E3-1220 v5 @ 3.00GHz. Aquest servidor està equipat amb dues targetes de xarxa integrades Intel I210 i una targeta PCIe Intel X710, de quatre ports SFP+.
 
 Per tal d'optimitzar aquest maquinari per treballar amb VPP, modifiquem els seguents paràmetres de BIOS (Advanced): 
