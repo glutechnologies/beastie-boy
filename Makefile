@@ -1,132 +1,58 @@
-CONFIG_MK=config.mk
+ROOT_DIR := $(CURDIR)
+BUILD_ROOT := $(ROOT_DIR)/build-root
 
-SKIP_CONFIG_INCLUDE_GOALS := clean reconfigure
-ifneq ($(filter $(SKIP_CONFIG_INCLUDE_GOALS),$(MAKECMDGOALS)),)
-SKIP_CONFIG_INCLUDE := 1
-endif
+.PHONY: all build build-release build-debug configure configure-release configure-debug \
+	install install-release install-debug test package package-release package-debug \
+	package-deb package-deb-release package-deb-debug clean distclean
 
-ifeq ($(SKIP_CONFIG_INCLUDE),)
-ifneq ($(wildcard $(CONFIG_MK)),)
-include $(CONFIG_MK)
-endif
-endif
+all: build
 
-CC?=gcc
-INSTALL?=install
-BIN_DIR=bin
-OBJ_ROOT=$(BIN_DIR)/obj/release
-DEBUG_OBJ_ROOT=$(BIN_DIR)/obj/debug
-BEASTIE_BIN=$(BIN_DIR)/beastie
-BOY_BIN=$(BIN_DIR)/boy
-BEASTIE_DEBUG_BIN=$(BIN_DIR)/beastie.debug
-BOY_DEBUG_BIN=$(BIN_DIR)/boy.debug
-WARN_CFLAGS?=-Wall
-OPT_CFLAGS?=-O2
-DEBUG_OPT_CFLAGS?=-O0 -g
-PROJECT_INCLUDES?=-I. -Icommon -Ibeastie -Iboy
-BOY_INCLUDES?=-I. -Icommon -Iboy
-EXTRA_CPPFLAGS?=
-EXTRA_CFLAGS?=
-EXTRA_LDFLAGS?=
-PCAP_CFLAGS?=
-PCAP_LIBS?=-lpcap
-MEMIF_CFLAGS?=
-MEMIF_LIBS?=-lmemif
-VAPI_CFLAGS?=
-VAPI_LIBS?=-lvapiclient
-VPP_COMPAT_CPPFLAGS?=
-DEPFLAGS?=-MMD -MP
-PREFIX?=/usr/local
-BINDIR?=$(PREFIX)/bin
-CFLAGS=$(WARN_CFLAGS) $(OPT_CFLAGS) $(PROJECT_INCLUDES) $(EXTRA_CPPFLAGS) $(EXTRA_CFLAGS) $(PCAP_CFLAGS) $(MEMIF_CFLAGS)
-DEBUG_CFLAGS=$(WARN_CFLAGS) $(DEBUG_OPT_CFLAGS) $(PROJECT_INCLUDES) $(EXTRA_CPPFLAGS) $(EXTRA_CFLAGS) $(PCAP_CFLAGS) $(MEMIF_CFLAGS)
-BOY_CFLAGS=$(WARN_CFLAGS) $(OPT_CFLAGS) $(BOY_INCLUDES) $(EXTRA_CPPFLAGS) $(VPP_COMPAT_CPPFLAGS) $(EXTRA_CFLAGS) $(PCAP_CFLAGS) $(VAPI_CFLAGS)
-BOY_DEBUG_CFLAGS=$(WARN_CFLAGS) $(DEBUG_OPT_CFLAGS) $(BOY_INCLUDES) $(EXTRA_CPPFLAGS) $(VPP_COMPAT_CPPFLAGS) $(EXTRA_CFLAGS) $(PCAP_CFLAGS) $(VAPI_CFLAGS)
-LDFLAGS=$(EXTRA_LDFLAGS) $(MEMIF_LIBS) $(PCAP_LIBS) -lpthread
-BOY_LDFLAGS=$(EXTRA_LDFLAGS) $(PCAP_LIBS) -lpthread $(VAPI_LIBS)
-COMMON_SRCS=common/common.c common/table.c
-BEASTIE_SRCS=$(shell find beastie -type f -name '*.c' | sort)
-BOY_SRCS=$(shell find boy -type f -name '*.c' | sort)
+build: build-release
 
-BEASTIE_OBJS=$(patsubst beastie/%.c,$(OBJ_ROOT)/beastie/%.o,$(BEASTIE_SRCS)) \
-	     $(OBJ_ROOT)/common/common.o \
-	     $(OBJ_ROOT)/common/table.o
-BOY_OBJS=$(patsubst boy/%.c,$(OBJ_ROOT)/boy/%.o,$(BOY_SRCS)) \
-	 $(OBJ_ROOT)/common/common.o \
-	 $(OBJ_ROOT)/common/table.o
-BEASTIE_DEBUG_OBJS=$(patsubst beastie/%.c,$(DEBUG_OBJ_ROOT)/beastie/%.o,$(BEASTIE_SRCS)) \
-		   $(DEBUG_OBJ_ROOT)/common/common.o \
-		   $(DEBUG_OBJ_ROOT)/common/table.o
-BOY_DEBUG_OBJS=$(patsubst boy/%.c,$(DEBUG_OBJ_ROOT)/boy/%.o,$(BOY_SRCS)) \
-	       $(DEBUG_OBJ_ROOT)/common/common.o \
-	       $(DEBUG_OBJ_ROOT)/common/table.o
-DEPS=$(BEASTIE_OBJS:.o=.d) $(BOY_OBJS:.o=.d) \
-     $(BEASTIE_DEBUG_OBJS:.o=.d) $(BOY_DEBUG_OBJS:.o=.d)
+build-release:
+	$(MAKE) -C $(BUILD_ROOT) TAG=release build
 
-all: $(CONFIG_MK) $(BEASTIE_BIN) $(BOY_BIN)
+build-debug:
+	$(MAKE) -C $(BUILD_ROOT) TAG=debug build
 
-$(CONFIG_MK): ./configure
-	./configure
+configure: configure-release
 
-reconfigure:
-	./configure
+configure-release:
+	$(MAKE) -C $(BUILD_ROOT) TAG=release configure
 
-debug: debug-beastie debug-boy
+configure-debug:
+	$(MAKE) -C $(BUILD_ROOT) TAG=debug configure
 
-$(BIN_DIR):
-	mkdir -p $(BIN_DIR)
+install: install-release
 
-$(OBJ_ROOT)/beastie/%.o: beastie/%.c $(CONFIG_MK) | $(BIN_DIR)
-	mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
+install-release:
+	$(MAKE) -C $(BUILD_ROOT) TAG=release install
 
-$(OBJ_ROOT)/boy/%.o: boy/%.c $(CONFIG_MK) | $(BIN_DIR)
-	mkdir -p $(dir $@)
-	$(CC) $(BOY_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+install-debug:
+	$(MAKE) -C $(BUILD_ROOT) TAG=debug install
 
-$(OBJ_ROOT)/common/%.o: common/%.c $(CONFIG_MK) | $(BIN_DIR)
-	mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) $(DEPFLAGS) -c -o $@ $<
+test:
+	$(MAKE) -C $(BUILD_ROOT) TAG=debug test
 
-$(DEBUG_OBJ_ROOT)/beastie/%.o: beastie/%.c $(CONFIG_MK) | $(BIN_DIR)
-	mkdir -p $(dir $@)
-	$(CC) $(DEBUG_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+package: package-release
 
-$(DEBUG_OBJ_ROOT)/boy/%.o: boy/%.c $(CONFIG_MK) | $(BIN_DIR)
-	mkdir -p $(dir $@)
-	$(CC) $(BOY_DEBUG_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+package-release:
+	$(MAKE) -C $(BUILD_ROOT) TAG=release package
 
-$(DEBUG_OBJ_ROOT)/common/%.o: common/%.c $(CONFIG_MK) | $(BIN_DIR)
-	mkdir -p $(dir $@)
-	$(CC) $(DEBUG_CFLAGS) $(DEPFLAGS) -c -o $@ $<
+package-debug:
+	$(MAKE) -C $(BUILD_ROOT) TAG=debug package
 
-$(BEASTIE_BIN): $(CONFIG_MK) $(BEASTIE_OBJS) | $(BIN_DIR)
-	$(CC) -o $@ $(BEASTIE_OBJS) $(LDFLAGS)
+package-deb: package-deb-release
 
-$(BOY_BIN): $(CONFIG_MK) $(BOY_OBJS) | $(BIN_DIR)
-	$(CC) -o $@ $(BOY_OBJS) $(BOY_LDFLAGS)
+package-deb-release:
+	$(MAKE) -C $(BUILD_ROOT) TAG=release package-deb
 
-$(BEASTIE_DEBUG_BIN): $(CONFIG_MK) $(BEASTIE_DEBUG_OBJS) | $(BIN_DIR)
-	$(CC) -o $@ $(BEASTIE_DEBUG_OBJS) $(LDFLAGS)
-
-$(BOY_DEBUG_BIN): $(CONFIG_MK) $(BOY_DEBUG_OBJS) | $(BIN_DIR)
-	$(CC) -o $@ $(BOY_DEBUG_OBJS) $(BOY_LDFLAGS)
-
-debug-beastie: $(BEASTIE_DEBUG_BIN)
-
-debug-boy: $(BOY_DEBUG_BIN)
-
-install: all
-	$(INSTALL) -d "$(DESTDIR)$(BINDIR)"
-	$(INSTALL) -m 0755 "$(BEASTIE_BIN)" "$(DESTDIR)$(BINDIR)/beastie"
-	$(INSTALL) -m 0755 "$(BOY_BIN)" "$(DESTDIR)$(BINDIR)/boy"
-
-uninstall:
-	rm -f "$(DESTDIR)$(BINDIR)/beastie" "$(DESTDIR)$(BINDIR)/boy"
+package-deb-debug:
+	$(MAKE) -C $(BUILD_ROOT) TAG=debug package-deb
 
 clean:
-	rm -rf $(BIN_DIR) $(CONFIG_MK)
+	$(MAKE) -C $(BUILD_ROOT) TAG=release clean
+	$(MAKE) -C $(BUILD_ROOT) TAG=debug clean
 
-.PHONY: all clean reconfigure debug debug-beastie debug-boy install uninstall
-
--include $(DEPS)
+distclean: clean
+	rm -rf $(ROOT_DIR)/bin

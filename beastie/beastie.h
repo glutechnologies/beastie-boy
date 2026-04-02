@@ -11,6 +11,7 @@
 
 typedef enum beastie_mode {
 	BEASTIE_MODE_CAPTURE = 0,
+	BEASTIE_MODE_SHOW_VERSION = 1,
 } beastie_mode_t;
 
 typedef struct beastie_capture_config {

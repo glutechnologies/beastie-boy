@@ -18,6 +18,9 @@ static void print_usage(const char *progname)
 		"  -h, --help\n"
 		"      Show this help message and exit.\n"
 		"\n"
+		"  -V, --version\n"
+		"      Show the Beastie code version derived from Git tags and commit.\n"
+		"\n"
 		"  -l, --log-level <error|warning|info|debug>\n"
 		"      Set the message verbosity.\n"
 		"      Default: info\n"
@@ -88,6 +91,7 @@ beastie_cli_parse_status_t beastie_parse_cli_options(int argc, char *argv[],
 		{"help", no_argument, NULL, 'h'},
 		{"id", required_argument, NULL, 'i'},
 		{"log-level", required_argument, NULL, 'l'},
+		{"version", no_argument, NULL, 'V'},
 		{"socket", required_argument, NULL, 's'},
 		{"write", required_argument, NULL, 'w'},
 		{"max-bytes", required_argument, NULL, 'm'},
@@ -101,8 +105,11 @@ beastie_cli_parse_status_t beastie_parse_cli_options(int argc, char *argv[],
 	options->capture.memif_id = BEASTIE_DEFAULT_MEMIF_ID;
 	options->capture.memif_socket_path = BEASTIE_DEFAULT_MEMIF_SOCKET_PATH;
 
-	while ((opt = getopt_long(argc, argv, "hi:l:m:s:w:", long_options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "Vhi:l:m:s:w:", long_options, NULL)) != -1) {
 		switch (opt) {
+		case 'V':
+			options->mode = BEASTIE_MODE_SHOW_VERSION;
+			break;
 		case 'i':
 			if (parse_memif_id(optarg, &options->capture.memif_id) != 0) {
 				fprintf(stderr, "Invalid memif id: %s\n", optarg);

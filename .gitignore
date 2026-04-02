@@ -36,7 +36,10 @@
 *.x86_64
 *.hex
 *.pcap
-/bin
+/build-root
+_CPack_Packages/
+*.deb
+*.tar.gz
 
 # Debug files
 *.dSYM/
@@ -58,4 +61,3 @@ dkms.conf
 *.vscode
 *.code-workspace
 *.codex
-config.mk
