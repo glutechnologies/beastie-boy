@@ -9,7 +9,8 @@
 
 int boy_run(boy_mode_t mode, app_log_level_t log_level, uint32_t span_unset_if_index,
 	    uint32_t span_set_if_index, const char *span_set_memif_name,
-	    boy_span_device_mode_t span_set_device_mode)
+	    boy_span_device_mode_t span_set_device_mode,
+	    const boy_memif_create_options_t *memif_create_options)
 {
 	boy_set_log_level(log_level);
 
@@ -24,7 +25,7 @@ int boy_run(boy_mode_t mode, app_log_level_t log_level, uint32_t span_unset_if_i
 	case BOY_MODE_SHOW_MEMIF:
 		return boy_show_memif();
 	case BOY_MODE_CREATE_MEMIF:
-		return boy_create_memif_if_missing();
+		return boy_create_memif(memif_create_options);
 	case BOY_MODE_SHOW_PHY:
 		return boy_show_phy();
 	case BOY_MODE_SHOW_SPAN:
@@ -50,5 +51,5 @@ int main(int argc, char *argv[])
 
 	return boy_run(options.mode, options.log_level, options.unset_span_if_index,
 		       options.set_span_if_index, options.set_span_memif_name,
-		       options.set_span_device_mode);
+		       options.set_span_device_mode, &options.memif_create);
 }

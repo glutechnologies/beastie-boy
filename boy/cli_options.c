@@ -6,6 +6,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define BOY_DEFAULT_MEMIF_ID 0U
+#define BOY_DEFAULT_MEMIF_SOCKET_ID 0U
+#define BOY_DEFAULT_MEMIF_RING_SIZE 1024U
+#define BOY_DEFAULT_MEMIF_BUFFER_SIZE 2048U
+
 static void boy_print_usage(const char *progname)
 {
 	fprintf(stderr,
@@ -36,28 +41,36 @@ static void boy_print_usage(const char *progname)
 		"  -p, --show-phy\n"
 		"      Query physical interface details via libvapi.\n"
 		"\n"
-		"  -c, --create-memif\n"
-		"      Create a default memif interface only if no memif exists.\n"
-		"\n"
-		"  -u, --unset-span <if-index>\n"
-		"      Remove all SPAN entries configured on source interface\n"
+			"  -c, --create-memif\n"
+			"      Create a memif interface in VPP.\n"
+			"      Defaults: --id 0 --socket-id 0 --ring-size 1024 --buffer-size 2048\n"
+			"\n"
+			"      --id <memif-id>\n"
+			"      --socket-id <socket-id>\n"
+			"      --ring-size <slots>\n"
+			"      --buffer-size <bytes>\n"
+			"      Override memif creation parameters used with --create-memif.\n"
+			"\n"
+			"  -u, --unset-span <if-index>\n"
+			"      Remove all SPAN entries configured on source interface\n"
 		"      with VPP internal sw_if_index=<if-index>.\n"
 		"\n"
-		"      --set-span --iface-idx <if-index> --memif <name> --device <both|rx|tx>\n"
-		"      Set SPAN from source interface <if-index> to destination memif\n"
-		"      interface <name> with selected device direction.\n"
+			"  -S, --set-span --iface-idx <if-index> --memif <name> --device <both|rx|tx>\n"
+			"      Set SPAN from source interface <if-index> to destination memif\n"
+			"      interface <name> with selected device direction.\n"
 		"\n"
 		"Examples:\n"
 		"  %s\n"
 		"  %s --show-span\n"
-		"  %s --show-memif\n"
-		"  %s --show-phy\n"
-		"  %s --create-memif\n"
-		"  %s --unset-span 5\n"
-		"  %s --set-span --iface-idx 1 --memif memif0/0 --device both\n"
-		"  %s --log-level debug\n",
-		progname, progname, progname, progname, progname, progname, progname, progname,
-		progname);
+			"  %s --show-memif\n"
+			"  %s --show-phy\n"
+			"  %s --create-memif\n"
+			"  %s --create-memif --id 1 --socket-id 0\n"
+			"  %s --unset-span 5\n"
+			"  %s -S --iface-idx 1 --memif memif0/0 --device both\n"
+			"  %s --log-level debug\n",
+			progname, progname, progname, progname, progname, progname, progname, progname,
+			progname, progname);
 }
 
 static int boy_parse_if_index(const char *value, uint32_t *result)
@@ -67,6 +80,20 @@ static int boy_parse_if_index(const char *value, uint32_t *result)
 
 	parsed = strtoul(value, &end, 10);
 	if (value[0] == '\0' || end == value || *end != '\0') {
+		return -1;
+	}
+
+	*result = (uint32_t)parsed;
+	return 0;
+}
+
+static int boy_parse_u32(const char *value, uint32_t *result)
+{
+	char *end = NULL;
+	unsigned long parsed;
+
+	parsed = strtoul(value, &end, 10);
+	if (value[0] == '\0' || end == value || *end != '\0' || parsed > 0xffffffffUL) {
 		return -1;
 	}
 
@@ -99,12 +126,18 @@ boy_cli_parse_status_t boy_parse_cli_options(int argc, char *argv[], boy_cli_opt
 	bool has_set_span_iface = false;
 	bool has_set_span_memif = false;
 	bool has_set_span_device = false;
+	bool has_create_memif = false;
+	bool has_create_memif_option = false;
 	static const struct option long_options[] = {
 		{"help", no_argument, NULL, 'h'},
+		{"id", required_argument, NULL, 'i'},
 		{"iface-idx", required_argument, NULL, 'I'},
 		{"log-level", required_argument, NULL, 'l'},
 		{"memif", required_argument, NULL, 'M'},
+		{"buffer-size", required_argument, NULL, 'B'},
 		{"device", required_argument, NULL, 'D'},
+		{"ring-size", required_argument, NULL, 'R'},
+		{"socket-id", required_argument, NULL, 'o'},
 		{"version", no_argument, NULL, 'V'},
 		{"create-memif", no_argument, NULL, 'c'},
 		{"show-memif", no_argument, NULL, 'm'},
@@ -122,14 +155,26 @@ boy_cli_parse_status_t boy_parse_cli_options(int argc, char *argv[], boy_cli_opt
 	options->set_span_if_index = 0;
 	options->set_span_memif_name = NULL;
 	options->set_span_device_mode = BOY_SPAN_DEVICE_BOTH;
+	options->memif_create.id = BOY_DEFAULT_MEMIF_ID;
+	options->memif_create.socket_id = BOY_DEFAULT_MEMIF_SOCKET_ID;
+	options->memif_create.ring_size = BOY_DEFAULT_MEMIF_RING_SIZE;
+	options->memif_create.buffer_size = BOY_DEFAULT_MEMIF_BUFFER_SIZE;
 
-	while ((opt = getopt_long(argc, argv, "VchI:l:D:M:mpsSu:v", long_options, NULL)) != -1) {
+	while ((opt = getopt_long(argc, argv, "Vchi:I:l:B:D:M:R:o:mpsSu:v", long_options, NULL)) != -1) {
 		switch (opt) {
 		case 'V':
 			options->mode = BOY_MODE_SHOW_CODE_VERSION;
 			break;
 		case 'c':
 			options->mode = BOY_MODE_CREATE_MEMIF;
+			has_create_memif = true;
+			break;
+		case 'i':
+			if (boy_parse_u32(optarg, &options->memif_create.id) != 0) {
+				fprintf(stderr, "Invalid memif id: %s\n", optarg);
+				return BOY_CLI_PARSE_EXIT_FAILURE;
+			}
+			has_create_memif_option = true;
 			break;
 		case 'I':
 			if (boy_parse_if_index(optarg, &options->set_span_if_index) != 0) {
@@ -152,6 +197,13 @@ boy_cli_parse_status_t boy_parse_cli_options(int argc, char *argv[], boy_cli_opt
 			}
 			has_set_span_device = true;
 			break;
+		case 'B':
+			if (boy_parse_u32(optarg, &options->memif_create.buffer_size) != 0) {
+				fprintf(stderr, "Invalid buffer size: %s\n", optarg);
+				return BOY_CLI_PARSE_EXIT_FAILURE;
+			}
+			has_create_memif_option = true;
+			break;
 		case 'M':
 			if (optarg[0] == '\0') {
 				fprintf(stderr, "Invalid memif interface name: %s\n", optarg);
@@ -159,6 +211,20 @@ boy_cli_parse_status_t boy_parse_cli_options(int argc, char *argv[], boy_cli_opt
 			}
 			options->set_span_memif_name = optarg;
 			has_set_span_memif = true;
+			break;
+		case 'R':
+			if (boy_parse_u32(optarg, &options->memif_create.ring_size) != 0) {
+				fprintf(stderr, "Invalid ring size: %s\n", optarg);
+				return BOY_CLI_PARSE_EXIT_FAILURE;
+			}
+			has_create_memif_option = true;
+			break;
+		case 'o':
+			if (boy_parse_u32(optarg, &options->memif_create.socket_id) != 0) {
+				fprintf(stderr, "Invalid socket id: %s\n", optarg);
+				return BOY_CLI_PARSE_EXIT_FAILURE;
+			}
+			has_create_memif_option = true;
 			break;
 		case 'm':
 			options->mode = BOY_MODE_SHOW_MEMIF;
@@ -202,6 +268,12 @@ boy_cli_parse_status_t boy_parse_cli_options(int argc, char *argv[], boy_cli_opt
 	    (!has_set_span_iface || !has_set_span_memif || !has_set_span_device)) {
 		fprintf(stderr,
 			"--set-span requires --iface-idx, --memif and --device\n");
+		return BOY_CLI_PARSE_EXIT_FAILURE;
+	}
+
+	if (!has_create_memif && has_create_memif_option) {
+		fprintf(stderr,
+			"--id/--socket-id/--ring-size/--buffer-size require --create-memif\n");
 		return BOY_CLI_PARSE_EXIT_FAILURE;
 	}
 

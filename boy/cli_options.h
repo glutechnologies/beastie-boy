@@ -9,6 +9,7 @@ typedef struct boy_cli_options {
 	uint32_t set_span_if_index;
 	const char *set_span_memif_name;
 	boy_span_device_mode_t set_span_device_mode;
+	boy_memif_create_options_t memif_create;
 } boy_cli_options_t;
 
 typedef enum boy_cli_parse_status {

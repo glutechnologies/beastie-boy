@@ -103,29 +103,17 @@ cleanup:
 	return rc;
 }
 
-int boy_create_memif_if_missing(void)
+int boy_create_memif(const boy_memif_create_options_t *options)
 {
 	vapi_ctx_t ctx = NULL;
-	boy_memif_table_t memif_entries = {0};
 	vapi_msg_memif_create *msg = NULL;
 	boy_memif_create_result_t result = {0};
 	vapi_error_e err;
 	int rc = 1;
 
-	boy_log_start("creating default memif when no memif interface exists");
+	boy_log_start("creating memif via libvapi");
 
 	if (boy_open_vapi(&ctx) != 0) {
-		goto cleanup;
-	}
-
-	if (boy_collect_memif(ctx, &memif_entries) != 0) {
-		goto cleanup;
-	}
-
-	if (memif_entries.count > 0) {
-		boy_log(APP_LOG_INFO, "memif already exists (%zu entries), skipping creation",
-			memif_entries.count);
-		rc = 0;
 		goto cleanup;
 	}
 
@@ -140,10 +128,10 @@ int boy_create_memif_if_missing(void)
 	msg->payload.mode = MEMIF_MODE_API_ETHERNET;
 	msg->payload.rx_queues = 1;
 	msg->payload.tx_queues = 1;
-	msg->payload.id = BOY_DEFAULT_MEMIF_ID;
-	msg->payload.socket_id = BOY_DEFAULT_MEMIF_SOCKET_ID;
-	msg->payload.ring_size = BOY_DEFAULT_MEMIF_RING_SIZE;
-	msg->payload.buffer_size = BOY_DEFAULT_MEMIF_BUFFER_SIZE;
+	msg->payload.id = options->id;
+	msg->payload.socket_id = options->socket_id;
+	msg->payload.ring_size = options->ring_size;
+	msg->payload.buffer_size = options->buffer_size;
 	msg->payload.no_zero_copy = false;
 
 	err = vapi_memif_create(ctx, msg, boy_memif_create_cb, &result);
@@ -161,12 +149,13 @@ int boy_create_memif_if_missing(void)
 		goto cleanup;
 	}
 
-	boy_log(APP_LOG_INFO, "created memif: id=%u socket-id=%u sw_if_index=%u",
-		BOY_DEFAULT_MEMIF_ID, BOY_DEFAULT_MEMIF_SOCKET_ID, result.sw_if_index);
+	boy_log(APP_LOG_INFO,
+		"created memif: id=%u socket-id=%u ring-size=%u buffer-size=%u sw_if_index=%u",
+		options->id, options->socket_id, options->ring_size, options->buffer_size,
+		result.sw_if_index);
 	rc = 0;
 
 cleanup:
-	boy_free_memif_table(&memif_entries);
 	boy_close_vapi(&ctx);
 	return rc;
 }
