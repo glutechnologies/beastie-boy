@@ -88,6 +88,70 @@ void boy_close_vapi(vapi_ctx_t *ctx)
 	*ctx = NULL;
 }
 
+typedef struct boy_simple_reply_result {
+	bool received_reply;
+	int retval;
+} boy_simple_reply_result_t;
+
+static vapi_error_e boy_sw_interface_set_flags_cb(struct vapi_ctx_s *ctx, void *callback_ctx,
+					      vapi_error_e rv, bool is_last,
+					      vapi_payload_sw_interface_set_flags_reply *reply)
+{
+	boy_simple_reply_result_t *result = callback_ctx;
+
+	(void)ctx;
+	(void)is_last;
+
+	if (rv != VAPI_OK) {
+		return rv;
+	}
+	if (reply == NULL) {
+		return VAPI_OK;
+	}
+
+	result->received_reply = true;
+	result->retval = reply->retval;
+	return VAPI_OK;
+}
+
+int boy_set_interface_admin_up(vapi_ctx_t ctx, u32 sw_if_index)
+{
+	vapi_msg_sw_interface_set_flags *msg = NULL;
+	boy_simple_reply_result_t result = {0};
+	vapi_error_e err;
+
+	msg = vapi_alloc_sw_interface_set_flags(ctx);
+	if (msg == NULL) {
+		boy_log(APP_LOG_ERROR, "vapi_alloc_sw_interface_set_flags failed");
+		return 1;
+	}
+
+	memset(&msg->payload, 0, sizeof(msg->payload));
+	msg->payload.sw_if_index = sw_if_index;
+	msg->payload.flags = IF_STATUS_API_FLAG_ADMIN_UP;
+
+	err = vapi_sw_interface_set_flags(ctx, msg, boy_sw_interface_set_flags_cb, &result);
+	msg = NULL;
+	if (err != VAPI_OK) {
+		boy_log(APP_LOG_ERROR,
+			"vapi_sw_interface_set_flags failed for sw_if_index=%u: %s",
+			sw_if_index, boy_vapi_error_str(err));
+		return 1;
+	}
+	if (!result.received_reply) {
+		boy_log(APP_LOG_ERROR,
+			"sw_interface_set_flags returned no reply for sw_if_index=%u",
+			sw_if_index);
+		return 1;
+	}
+	if (result.retval != 0) {
+		boy_log(APP_LOG_ERROR, "sw_interface_set_flags retval=%d for sw_if_index=%u",
+			result.retval, sw_if_index);
+		return 1;
+	}
+
+	return 0;
+}
 void boy_copy_api_string(char *dst, size_t dst_size, const u8 *src, size_t src_size)
 {
 	size_t len = strnlen((const char *)src, src_size);

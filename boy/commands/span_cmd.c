@@ -328,6 +328,23 @@ int boy_set_span(uint32_t source_if_index, const char *destination_memif_name,
 		goto cleanup;
 	}
 
+	if ((source_entry->flags & IF_STATUS_API_FLAG_ADMIN_UP) == 0) {
+		boy_log(APP_LOG_INFO, "source interface %s(%u) is admin-down, setting it admin-up",
+			source_entry->interface_name, source_entry->sw_if_index);
+		if (boy_set_interface_admin_up(ctx, source_entry->sw_if_index) != 0) {
+			goto cleanup;
+		}
+	}
+
+	if ((destination_entry->flags & IF_STATUS_API_FLAG_ADMIN_UP) == 0) {
+		boy_log(APP_LOG_INFO,
+			"destination interface %s(%u) is admin-down, setting it admin-up",
+			destination_entry->interface_name, destination_entry->sw_if_index);
+		if (boy_set_interface_admin_up(ctx, destination_entry->sw_if_index) != 0) {
+			goto cleanup;
+		}
+	}
+
 	state = boy_span_state_from_device_mode(device_mode);
 	boy_log(APP_LOG_INFO,
 		"setting SPAN: src=%s(%u) dst=%s(%u) device=%s l2=no",

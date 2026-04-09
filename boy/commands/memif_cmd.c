@@ -149,8 +149,15 @@ int boy_create_memif(const boy_memif_create_options_t *options)
 		goto cleanup;
 	}
 
+	if (boy_set_interface_admin_up(ctx, result.sw_if_index) != 0) {
+		boy_log(APP_LOG_ERROR,
+			"memif created but failed to set admin-up: sw_if_index=%u",
+			result.sw_if_index);
+		goto cleanup;
+	}
+
 	boy_log(APP_LOG_INFO,
-		"created memif: id=%u socket-id=%u ring-size=%u buffer-size=%u sw_if_index=%u",
+		"created memif and set admin-up: id=%u socket-id=%u ring-size=%u buffer-size=%u sw_if_index=%u",
 		options->id, options->socket_id, options->ring_size, options->buffer_size,
 		result.sw_if_index);
 	rc = 0;
