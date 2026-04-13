@@ -162,6 +162,7 @@ Install the `libmemif.so` library:
 $ cd /root/vpp/extras/libmemif/build
 $ make install
 ```
+Configure the general VPP parameters in /etc/vpp/startup.conf. It is essential to add the `memif_plugin.so` plugin.
 
 # Appendix B: APU3 Development Platform with Debian 13
 We have a PC Engines APU3D4 with 3 i211AT LAN ports, an AMD GX-412TC CPU, and 4 GB of DRAM. These network cards are compatible with DPDK. To install Debian 13, download a `netinst.iso` image from https://www.debian.org/CD/netinst/ and copy it to a USB drive:
